@@ -1,7 +1,7 @@
-NotoSansCJKjp-VF.ttf (Version 2.004):
+NotoSansCJK-VF.ttf.ttc (Version 2.004, JP/KR/SC/TC/HK):
 © 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
 
-NotoSerifCJKjp-VF.ttf (Version 2.003):
+NotoSerifCJK-VF.ttf.ttc (Version 2.003, JP/KR/SC/TC/HK):
 © 2017-2024 Adobe (http://www.adobe.com/).
 
 Both fonts are unmodified upstream binaries licensed under the SIL Open Font

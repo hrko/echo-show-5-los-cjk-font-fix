@@ -2,18 +2,33 @@
 <html lang="ja">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>日本語システムフォントのウェイト確認</title>
+<title>CJK システムフォントのウェイト確認</title>
 <style>
 body { margin: 16px; background: #fff; color: #111; }
 h1 { font: bold 22px sans-serif; }
 p { font: 16px sans-serif; }
 .sample { font-size: 28px; margin: 12px 0; }
 </style>
-<h1>日本語システムフォントのウェイト確認</h1>
+<h1>CJK システムフォントのウェイト確認</h1>
+<label>ロケール <select id="locale">
+<option value="ja">日本語</option><option value="ko">한국어</option>
+<option value="zh-Hans">简体中文</option><option value="zh-Hant">繁體中文（台灣）</option>
+<option value="zh-Hant-HK">繁體中文（香港）</option></select></label>
 <p>外部フォントは読み込みません。ゴシック体は100〜900、明朝体は200〜900。
 明朝体の100は200と同じ表示が期待されます。ブラウザ固有のフォント設定にも影響されます。</p>
 <main id="samples"></main>
 <script>
+const texts = {
+  ja: '日本語の漢字・ひらがな・カタカナ 骨直令辻',
+  ko: '한국어 한글 글꼴 굵기 骨直令',
+  'zh-Hans': '简体中文 汉语 字体粗细 骨直令',
+  'zh-Hant': '繁體中文 漢語 字體粗細 ㄅㄆㄇ 骨直令',
+  'zh-Hant-HK': '香港繁體中文 廣東話 字體粗幼 骨直令',
+};
+function render() {
+const lang = document.querySelector('select').value;
+document.querySelector('main').lang = lang;
+document.querySelector('main').replaceChildren();
 for (const [name, family] of [['ゴシック体', 'sans-serif'], ['明朝体', 'serif']]) {
   const heading = document.createElement('h2');
   heading.textContent = name;
@@ -23,9 +38,12 @@ for (const [name, family] of [['ゴシック体', 'sans-serif'], ['明朝体', '
     row.className = 'sample';
     row.style.fontFamily = family;
     row.style.fontWeight = weight;
-    row.textContent = `${weight} 日本語の漢字・ひらがな・カタカナ 骨直令辻`;
+    row.textContent = `${weight} ${texts[lang]}`;
     document.querySelector('main').append(row);
   }
 }
+}
+document.querySelector('select').addEventListener('change', render);
+render();
 </script>
 </html>

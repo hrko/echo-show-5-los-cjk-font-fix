@@ -1,5 +1,7 @@
 # HOWTO_GEMINI.md の検証記録
 
+この文書は日本語単独版の検証履歴です。現在の全 CJK 版については [CJK_VALIDATION.md](CJK_VALIDATION.md) を参照してください。
+
 2026-09-17 に、配置済み ROM、フォントの実データ、一次資料を照合しました。
 元の `HOWTO_GEMINI.md` は比較用にそのまま残しています。
 
@@ -54,6 +56,7 @@ GitHub 上のファイルは `gh api` で取得・確認しました。
 
 その後、2026-09-17 に対象実機で ARM update-binary / Edify の実行、書込み、起動を確認しました。
 実機の TWRP は BusyBox ではなく Toybox を搭載していたため、両方に対応するよう修正しました。
-詳細は [実機検証記録](DEVICE_VALIDATION.md) を参照してください。全ウェイト・全字形・復元の実行は未検証です。
+復元 ZIP による元の XML への復元、追加フォント削除、正常再起動も確認しました。
+詳細は [実機検証記録](DEVICE_VALIDATION.md) を参照してください。全ウェイト・全字形は未検証です。
 ビルド時の検証結果と SHA-256 は `dist/verification.json` に記録します。
 同ファイルの `device_tested: false` はビルド処理自体が実機テストを行わないことを示します。
