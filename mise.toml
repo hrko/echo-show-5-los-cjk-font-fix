@@ -1,0 +1,11 @@
+[tools]
+codex = "0.153.0"
+uv = "0.12.9"
+
+[tasks.build]
+description = "Verify inputs and build install/restore ZIPs"
+run = "uv run --locked --cache-dir .uv-cache python scripts/build_zip.py"
+
+[tasks.test]
+description = "Test XML preservation and installer guards"
+run = "uv run --locked --cache-dir .uv-cache python -m unittest discover -s tests -v"

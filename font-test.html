@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>日本語システムフォントのウェイト確認</title>
+<style>
+body { margin: 16px; background: #fff; color: #111; }
+h1 { font: bold 22px sans-serif; }
+p { font: 16px sans-serif; }
+.sample { font-size: 28px; margin: 12px 0; }
+</style>
+<h1>日本語システムフォントのウェイト確認</h1>
+<p>外部フォントは読み込みません。ゴシック体は100〜900、明朝体は200〜900。
+明朝体の100は200と同じ表示が期待されます。ブラウザ固有のフォント設定にも影響されます。</p>
+<main id="samples"></main>
+<script>
+for (const [name, family] of [['ゴシック体', 'sans-serif'], ['明朝体', 'serif']]) {
+  const heading = document.createElement('h2');
+  heading.textContent = name;
+  document.querySelector('main').append(heading);
+  for (let weight = 100; weight <= 900; weight += 100) {
+    const row = document.createElement('div');
+    row.className = 'sample';
+    row.style.fontFamily = family;
+    row.style.fontWeight = weight;
+    row.textContent = `${weight} 日本語の漢字・ひらがな・カタカナ 骨直令辻`;
+    document.querySelector('main').append(row);
+  }
+}
+</script>
+</html>

@@ -1,0 +1,9 @@
+NotoSansCJKjp-VF.ttf (Version 2.004):
+© 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+
+NotoSerifCJKjp-VF.ttf (Version 2.003):
+© 2017-2024 Adobe (http://www.adobe.com/).
+
+Both fonts are unmodified upstream binaries licensed under the SIL Open Font
+License 1.1. See NotoSans-OFL.txt and NotoSerif-OFL.txt in this directory.
+Source: https://github.com/notofonts/noto-cjk/tree/f8d157532fbfaeda587e826d4cd5b21a49186f7c
