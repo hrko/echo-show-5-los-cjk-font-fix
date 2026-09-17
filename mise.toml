@@ -5,7 +5,7 @@ uv = "0.12.9"
 
 [tasks.build]
 description = "Verify inputs and build independent CJK, Latin, serif and mono install/restore ZIPs"
-run = "uv run --locked --cache-dir .uv-cache python scripts/build_zip.py"
+run = "uv run --locked --cache-dir .uv-cache python scripts/build_patches.py"
 
 [tasks.fetch-assets]
 description = "Fetch and verify the pinned ROM, fonts and ARMv7 Python runtime"

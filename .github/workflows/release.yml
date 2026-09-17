@@ -122,14 +122,14 @@ jobs:
             dist/cronos-latin-fonts-install.zip
             dist/cronos-latin-fonts-restore.zip
             dist/SHA256SUMS.txt
-            dist/cjk-verification.json
-            dist/latin-verification.json
+            dist/cronos-cjk-fonts-verification.json
+            dist/cronos-latin-fonts-verification.json
             dist/cronos-serif-fonts-install.zip
             dist/cronos-serif-fonts-restore.zip
             dist/cronos-mono-fonts-install.zip
             dist/cronos-mono-fonts-restore.zip
-            dist/serif-verification.json
-            dist/mono-verification.json
+            dist/cronos-serif-fonts-verification.json
+            dist/cronos-mono-fonts-verification.json
 
       - name: Upload and verify assets, then publish
         env:
@@ -141,8 +141,8 @@ jobs:
           endpoint="repos/$GH_REPO/releases/$RELEASE_ID"
           gh api "$endpoint" > "$RUNNER_TEMP/release.json"
           jq -e --arg tag "$TAG" '.draft == true and .tag_name == $tag' "$RUNNER_TEMP/release.json" > /dev/null
-          assets=(dist/cronos-cjk-fonts-install.zip dist/cronos-cjk-fonts-restore.zip dist/cronos-latin-fonts-install.zip dist/cronos-latin-fonts-restore.zip dist/SHA256SUMS.txt dist/cjk-verification.json dist/latin-verification.json)
-          assets+=(dist/cronos-serif-fonts-install.zip dist/cronos-serif-fonts-restore.zip dist/cronos-mono-fonts-install.zip dist/cronos-mono-fonts-restore.zip dist/serif-verification.json dist/mono-verification.json)
+          assets=(dist/cronos-cjk-fonts-install.zip dist/cronos-cjk-fonts-restore.zip dist/cronos-latin-fonts-install.zip dist/cronos-latin-fonts-restore.zip dist/SHA256SUMS.txt dist/cronos-cjk-fonts-verification.json dist/cronos-latin-fonts-verification.json)
+          assets+=(dist/cronos-serif-fonts-install.zip dist/cronos-serif-fonts-restore.zip dist/cronos-mono-fonts-install.zip dist/cronos-mono-fonts-restore.zip dist/cronos-serif-fonts-verification.json dist/cronos-mono-fonts-verification.json)
           # A failed run can be retried while the release is still a draft.
           gh release upload "$TAG" "${assets[@]}" --clobber
           gh api "$endpoint/assets" --paginate > "$RUNNER_TEMP/release-assets.json"

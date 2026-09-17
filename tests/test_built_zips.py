@@ -27,6 +27,8 @@ class BuiltZipTests(unittest.TestCase):
         for (component, mode), path in self.paths.items():
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), manifest[path.name])
             with zipfile.ZipFile(path) as archive:
+                report = ROOT / 'dist' / f'cronos-{component}-fonts-verification.json'
+                self.assertEqual(report.read_bytes(), archive.read('verification.json'))
                 fonts = {name for name in archive.namelist() if name.startswith('system/fonts/')}
                 if component == 'latin':
                     self.assertEqual(fonts, {'system/fonts/GoogleSansFlex-Regular.ttf'} if mode == 'install' else set())
@@ -48,12 +50,12 @@ class BuiltZipTests(unittest.TestCase):
                     self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(), expected, name)
 
     def test_real_rom_transitions_reuse_recovery_workspace(self):
+        from build_cjk import patch_cjk
         from build_latin import patch_latin
         from build_named import patch_named
-        from build_zip import patch_xml
         from font_slots import OWNERS, compose_xml, split_xml
         original = (ROOT / 'build/fonts.original.xml').read_bytes()
-        patches = {'cjk': patch_xml(original), 'latin': patch_latin(original),
+        patches = {'cjk': patch_cjk(original), 'latin': patch_latin(original),
                    **{key: patch_named(original, key) for key in ('serif', 'mono')}}
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

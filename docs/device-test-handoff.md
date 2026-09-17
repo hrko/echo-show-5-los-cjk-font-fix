@@ -68,8 +68,8 @@ a131a918572ace3c1c6ae96398a4f9f8925d82c553ed347fa9bee34f2ab08317  cronos-latin-f
 
 補助資料:
 
-- `dist/cjk-verification.json`、`dist/latin-verification.json`: 元・追加フォントのハッシュ、軸、字形等。
-- `build/fonts.original.xml`、`build/fonts.patched.xml`（CJK のみ）、`build/fonts.latin.xml`（欧文のみ）。
+- `dist/cronos-cjk-fonts-verification.json`、`dist/cronos-latin-fonts-verification.json`: 元・追加フォントのハッシュ、軸、字形等。
+- `build/fonts.original.xml`、`build/fonts.cjk.xml`（CJK のみ）、`build/fonts.latin.xml`（欧文のみ）。
 - `font-test.html`、`latin-font-test.html`: 外部フォントを読み込まない目視確認ページ。
 - `build/pixel-research/`: Pixel の参考資料。再ダウンロード不要。Pixel の標準 sans-serif は Roboto で、今回の設定はその再現ではありません。抽出 TTF を端末へ配布しないでください。
 

@@ -43,7 +43,7 @@ mise run build
 mise run test
 ```
 
-`dist/` に各パッチの install / restore ZIP、検証結果の `*-verification.json`、`SHA256SUMS.txt` を出力します。入力ファイルは固定ハッシュで検証し、一致する既存ファイルは再利用します。
+`dist/` に各パッチの install / restore ZIP、検証結果の `cronos-{cjk,latin,serif,mono}-fonts-verification.json`、`SHA256SUMS.txt` を出力します。入力ファイルは固定ハッシュで検証し、一致する既存ファイルは再利用します。
 
 展開済みの `build/system.img` も再利用するため、手動で変更した場合は削除して再ビルドしてください。
 

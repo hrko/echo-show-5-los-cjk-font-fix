@@ -8,9 +8,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import test_build
+from build_cjk import patch_cjk
+from build_common import recovery_payload
 from build_latin import AXES, locations, patch_latin
 from build_named import patch_named
-from build_zip import patch_xml, recovery_payload
 from font_slots import OWNERS, compose_xml, payload, split_xml
 
 ORIGINAL = test_build.XMLTests.ORIGINAL.replace(b'    <family lang="en">', b'''    <family name="sans-serif">
@@ -30,11 +31,11 @@ ORIGINAL = test_build.XMLTests.ORIGINAL.replace(b'    <family lang="en">', b''' 
 
 class SlotTests(unittest.TestCase):
     def test_commutes_and_roundtrips_without_changing_other_bytes(self):
-        self.assertEqual(patch_latin(patch_xml(ORIGINAL)), patch_xml(patch_latin(ORIGINAL)))
-        for data in (ORIGINAL, patch_xml(ORIGINAL), patch_latin(ORIGINAL), patch_latin(patch_xml(ORIGINAL))):
+        self.assertEqual(patch_latin(patch_cjk(ORIGINAL)), patch_cjk(patch_latin(ORIGINAL)))
+        for data in (ORIGINAL, patch_cjk(ORIGINAL), patch_latin(ORIGINAL), patch_latin(patch_cjk(ORIGINAL))):
             self.assertEqual(compose_xml(*split_xml(data)), data)
         with self.assertRaises(ValueError):
-            payload(ORIGINAL, patch_latin(patch_xml(ORIGINAL)), 'latin')
+            payload(ORIGINAL, patch_latin(patch_cjk(ORIGINAL)), 'latin')
 
     def test_android11_explicit_axes_and_preserved_aliases(self):
         tree = ET.fromstring(patch_latin(ORIGINAL))
@@ -68,7 +69,7 @@ class RecoveryComposerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.patches = {
-            'cjk': patch_xml(ORIGINAL), 'latin': patch_latin(ORIGINAL),
+            'cjk': patch_cjk(ORIGINAL), 'latin': patch_latin(ORIGINAL),
             'serif': patch_named(ORIGINAL, 'serif'),
             'mono': patch_named(ORIGINAL, 'mono'),
         }

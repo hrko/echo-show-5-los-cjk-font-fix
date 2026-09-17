@@ -40,7 +40,7 @@ def patch_named(original, component):
 
 
 def font_info(component, style):
-    from build_zip import check
+    from build_common import check
     config = COMPONENTS[component]
     filename, upstream, expected, version = config['fonts'][style]
     path = ROOT / filename
@@ -78,7 +78,14 @@ def font_info(component, style):
 
 
 def build_named(original, binary, dist, component):
-    from build_zip import CHECKER, META, recovery_payload, updater, write_zip
+    from build_common import (
+        CHECKER,
+        META,
+        artifact_name,
+        recovery_payload,
+        updater,
+        write_zip,
+    )
     from python_runtime import runtime_payload
     config = COMPONENTS[component]
     patched = patch_named(original, component)
@@ -124,10 +131,10 @@ def build_named(original, binary, dist, component):
         if not restore:
             for info in infos.values():
                 files['system/fonts/' + info['file']] = (ROOT / info['file']).read_bytes()
-        path = dist / f"cronos-{component}-fonts-{'restore' if restore else 'install'}.zip"
+        path = dist / artifact_name(component, 'restore' if restore else 'install')
         write_zip(path, files)
         sums.append(f'{sha256(path)}  {path.name}')
         print(f'Verified: {path.name} ({path.stat().st_size:,} bytes)')
     (BUILD / f'fonts.{component}.xml').write_bytes(patched)
-    (dist / f'{component}-verification.json').write_bytes(shared['verification.json'])
+    (dist / artifact_name(component, 'verification')).write_bytes(shared['verification.json'])
     return sums

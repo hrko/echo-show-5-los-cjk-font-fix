@@ -6,7 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from build_zip import patch_xml, recovery_payload
+from build_cjk import patch_cjk
+from build_common import recovery_payload
 from python_runtime import ASSETS, CACHE, runtime_payload, verify
 from test_font_slots import ORIGINAL
 
@@ -25,7 +26,7 @@ class PythonRecoveryTests(unittest.TestCase):
         self.source = self.root / 'fonts.xml'
         self.source.write_bytes(ORIGINAL)
         self.args = tuple(str(self.root / p) for p in ('fonts.xml', 'patch', 'work'))
-        for name, data in recovery_payload(ORIGINAL, patch_xml(ORIGINAL), 'cjk', False).items():
+        for name, data in recovery_payload(ORIGINAL, patch_cjk(ORIGINAL), 'cjk', False).items():
             path = self.root / name
             path.parent.mkdir(exist_ok=True)
             path.write_bytes(data)
@@ -64,7 +65,7 @@ class PythonRecoveryTests(unittest.TestCase):
         self.source.write_bytes(data)
         recovery.prepare(*self.args)
         recovery.stage(*self.args)
-        self.assertEqual(Path(str(self.source) + '.jpfont-new').read_bytes(), patch_xml(data))
+        self.assertEqual(Path(str(self.source) + '.jpfont-new').read_bytes(), patch_cjk(data))
 
     def test_rejects_duplicate_and_traversal_manifest_keys(self):
         path = self.root / 'patch/slots.txt'

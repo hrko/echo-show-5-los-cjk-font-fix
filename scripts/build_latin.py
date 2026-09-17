@@ -36,7 +36,7 @@ def locations():
 
 
 def patch_latin(original):
-    from build_zip import check
+    from build_common import check
     before = ET.fromstring(original)
     text = original.decode()
     for family in WIDTHS:
@@ -78,7 +78,7 @@ def patch_latin(original):
 
 
 def font_info(path):
-    from build_zip import check
+    from build_common import check
     verify_latin(path)
     with TTFont(path, checkChecksums=2) as font:
         check(font['name'].getDebugName(5) == LATIN_VERSION, "Unexpected font version")
@@ -108,7 +108,15 @@ def font_info(path):
 
 
 def build_latin(original, binary, dist):
-    from build_zip import CHECKER, META, check, recovery_payload, updater, write_zip
+    from build_common import (
+        CHECKER,
+        META,
+        artifact_name,
+        check,
+        recovery_payload,
+        updater,
+        write_zip,
+    )
     patched = patch_latin(original)
     info = font_info(ROOT / LATIN_FILE)
     stock = ET.fromstring(original)
@@ -169,10 +177,10 @@ def build_latin(original, binary, dist):
                                                 component='latin', retained=retained)
         if not restore:
             files['system/fonts/' + LATIN_FILE] = (ROOT / LATIN_FILE).read_bytes()
-        path = dist / f"cronos-latin-fonts-{'restore' if restore else 'install'}.zip"
+        path = dist / artifact_name('latin', 'restore' if restore else 'install')
         write_zip(path, files)
         sums.append(f"{sha256(path)}  {path.name}")
         print(f"Verified: {path.name} ({path.stat().st_size:,} bytes)")
     (BUILD / 'fonts.latin.xml').write_bytes(patched)
-    (dist / 'latin-verification.json').write_bytes(shared['verification.json'])
+    (dist / artifact_name('latin', 'verification')).write_bytes(shared['verification.json'])
     return sums

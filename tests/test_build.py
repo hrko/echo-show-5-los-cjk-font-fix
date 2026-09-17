@@ -11,7 +11,8 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 # The script imports require the search path configured above.
-from build_zip import META, patch_xml, updater, write_zip
+from build_cjk import patch_cjk
+from build_common import META, updater, write_zip
 
 
 class XMLTests(unittest.TestCase):
@@ -38,7 +39,7 @@ class XMLTests(unittest.TestCase):
     </familyset>'''
 
     def test_preserves_surrounding_bytes_and_uses_real_ranges(self):
-        result = patch_xml(self.ORIGINAL)
+        result = patch_cjk(self.ORIGINAL)
         before, _rest = self.ORIGINAL.split(b'<family lang="zh-Hans">')
         after = self.ORIGINAL.split(b'<alias', 1)[1]
         self.assertTrue(result.startswith(before))
@@ -67,13 +68,13 @@ class XMLTests(unittest.TestCase):
                     self.ORIGINAL.replace(b'NotoSerifCJK-Regular.ttc', b'CustomSerif.ttf'),
                     self.ORIGINAL.replace(b'</familyset>', b'<family lang="ja" /></familyset>')):
             with self.assertRaises(ValueError):
-                patch_xml(old)
+                patch_cjk(old)
 
     def test_rejects_extra_old_font_reference_and_wrong_region(self):
         for old in (self.ORIGINAL.replace(b'Roboto-Regular.ttf', b'NotoSansCJK-Regular.ttc'),
                     self.ORIGINAL.replace(b'index="2"', b'index="0"')):
             with self.assertRaises(ValueError):
-                patch_xml(old)
+                patch_cjk(old)
 
 
 class UpdaterTests(unittest.TestCase):
@@ -84,7 +85,7 @@ class UpdaterTests(unittest.TestCase):
                      for k, f in [('sans', 'Sans'), ('serif', 'Serif')]}
         with tempfile.TemporaryDirectory() as directory:
             (Path(directory) / 'build.prop').write_text('ro.system.build.fingerprint=test\n')
-            with patch('build_zip.BUILD', Path(directory)):
+            with patch('build_common.BUILD', Path(directory)):
                 install = updater(b'original', b'patched', infos, originals).decode()
                 restore = updater(b'original', b'patched', infos, originals, True).decode()
         for script in [install, restore]:

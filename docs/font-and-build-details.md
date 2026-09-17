@@ -79,6 +79,16 @@ Ruff と ty は mise.toml でバージョンを固定しています。更新時
 `fetch-assets` は対象 ROM、Noto Sans CJK / Serif CJK の可変 TTC、Google Sans Flex、Noto Serif VF、Google Sans Code VF、ARMv7 Python / musl を取得し、固定ハッシュを検証します。
 一致する既存ファイルは再利用し、異なるファイルがある場合は上書きせず中止します。
 
+ビルドの入口は `scripts/build_patches.py`（`mise run build`）です。`build_cjk.py` と `build_latin.py` が各パッチを、`build_named.py` が名前付きファミリーの Serif / Mono を生成します。各ビルダーは `build_…(original, binary, dist, …)`、XML 置換は `patch_…(original, …)` に揃えています。ZIP・recovery の共通処理と配布ファイルの命名は `build_common.py` に集約しています。
+
+パッチ識別子は `cjk` / `latin` / `serif` / `mono` を使い、ファイル名を次の規則に揃えます。
+
+- 導入・復元 ZIP: `cronos-{component}-fonts-{install,restore}.zip`
+- 検証 JSON: `cronos-{component}-fonts-verification.json`
+- 中間 XML: `build/fonts.{component}.xml`（元 ROM は `build/fonts.original.xml`）
+
+旧 `scripts/build_zip.py` の直接実行は `scripts/build_patches.py` に置き換えてください。旧 `{component}-verification.json` と `build/fonts.patched.xml` は以後更新されません。既存の出力ディレクトリに残る旧名ファイルは自動削除しません。ZIP 内の検証 JSON は全パッチ共通の `verification.json` です。
+
 出力先は `dist/` です。
 
 | ファイル | 用途 |
@@ -89,10 +99,10 @@ Ruff と ty は mise.toml でバージョンを固定しています。更新時
 | `cronos-latin-fonts-restore.zip` | 欧文2ファミリーだけを元 ROM へ復元 |
 | `cronos-serif-fonts-install.zip` / `cronos-serif-fonts-restore.zip` | serif だけを導入 / 元 ROM へ復元 |
 | `cronos-mono-fonts-install.zip` / `cronos-mono-fonts-restore.zip` | monospace だけを導入 / 元 ROM へ復元 |
-| `serif-verification.json` / `mono-verification.json` | 出典・軸・字形・元フォントとの収録文字差分 |
+| `cronos-serif-fonts-verification.json` / `cronos-mono-fonts-verification.json` | 出典・軸・字形・元フォントとの収録文字差分 |
 | `SHA256SUMS.txt` | ZIP の SHA-256 |
-| `cjk-verification.json` | 入力ハッシュ・ウェイト範囲・字形の検証結果 |
-| `latin-verification.json` | 公開フォントの出典・軸・字形・Roboto との差分 |
+| `cronos-cjk-fonts-verification.json` | 入力ハッシュ・ウェイト範囲・字形の検証結果 |
+| `cronos-latin-fonts-verification.json` | 公開フォントの出典・軸・字形・Roboto との差分 |
 
 入力・`build/`・`dist/`・仮想環境は Git 管理対象外です。
 展開済みの `build/system.img` は再利用されます。手動で変更した場合は削除して再ビルドしてください。
