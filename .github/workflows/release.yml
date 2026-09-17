@@ -116,8 +116,11 @@ jobs:
           subject-path: |
             dist/cronos-cjk-fonts-install.zip
             dist/cronos-cjk-fonts-restore.zip
+            dist/cronos-latin-fonts-install.zip
+            dist/cronos-latin-fonts-restore.zip
             dist/SHA256SUMS.txt
             dist/cjk-verification.json
+            dist/latin-verification.json
 
       - name: Upload and verify assets, then publish
         env:
@@ -129,7 +132,7 @@ jobs:
           endpoint="repos/$GH_REPO/releases/$RELEASE_ID"
           gh api "$endpoint" > "$RUNNER_TEMP/release.json"
           jq -e --arg tag "$TAG" '.draft == true and .tag_name == $tag' "$RUNNER_TEMP/release.json" > /dev/null
-          assets=(dist/cronos-cjk-fonts-install.zip dist/cronos-cjk-fonts-restore.zip dist/SHA256SUMS.txt dist/cjk-verification.json)
+          assets=(dist/cronos-cjk-fonts-install.zip dist/cronos-cjk-fonts-restore.zip dist/cronos-latin-fonts-install.zip dist/cronos-latin-fonts-restore.zip dist/SHA256SUMS.txt dist/cjk-verification.json dist/latin-verification.json)
           # A failed run can be retried while the release is still a draft.
           gh release upload "$TAG" "${assets[@]}" --clobber
           gh api "$endpoint/assets" --paginate > "$RUNNER_TEMP/release-assets.json"
@@ -140,7 +143,7 @@ jobs:
               "$RUNNER_TEMP/release-assets.json" > /dev/null
           done
           # Refuse to publish additional, unattested files added manually.
-          jq -se '[.[][]] | length == 4' "$RUNNER_TEMP/release-assets.json" > /dev/null
+          jq -se '[.[][]] | length == 7' "$RUNNER_TEMP/release-assets.json" > /dev/null
           encoded_ref=$(jq -rn --arg ref "refs/tags/$TAG" '$ref | @uri')
           current_sha=$(gh api "repos/$GH_REPO/commits/$encoded_ref" --jq '.sha')
           test "$current_sha" = "$GITHUB_SHA"

@@ -86,10 +86,8 @@ class UpdaterTests(unittest.TestCase):
                 install = updater(b'original', b'patched', infos, originals).decode()
                 restore = updater(b'original', b'patched', infos, originals, True).decode()
         for script in [install, restore]:
-            guard = next(line for line in script.splitlines()
-                         if '"hash", "/tmp/jp-font-system/system/etc/fonts.xml"' in line)
-            self.assertEqual(re.findall(r'"([0-9a-f]{64})"', guard),
-                             [hashlib.sha256(data).hexdigest() for data in (b'original', b'patched')])
+            self.assertLess(script.index('"prepare"'), script.index('package_extract_file("system/'))
+            self.assertIn('"stage"', script)
             xml_commit = script.index('assert(rename("/tmp/jp-font-system/system/etc/fonts.xml.jpfont-new"')
             payloads = originals if script == restore else infos
             for info in payloads.values():
@@ -117,27 +115,14 @@ class ZipTests(unittest.TestCase):
 
 
 class RecoveryHashGuardTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        git_bash = Path("C:/Program Files/Git/bin/bash.exe")
-        cls.shell = str(git_bash) if git_bash.exists() else shutil.which("bash")
-        if not cls.shell:
-            raise unittest.SkipTest("bash required for host execution of the recovery hash guard")
-
     def test_matching_modified_missing_and_alternate_hashes(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "build") as directory:
             path = Path(directory)
-            # Host shim exposes the same BusyBox applet calling convention.
-            # Actual Toybox/BusyBox remains a device-side prerequisite.
-            (path / "bb.sh").write_text('#!/bin/sh\nexec "$@"\n', newline="\n")
-            (path / "bb.sh").chmod(0o755)
-            (path / "check.sh").write_bytes(CHECKER.replace(
-                b'BB=/sbin/toybox\n[ -x "$BB" ] || BB=/sbin/busybox', b"BB=./bb.sh"))
             (path / "font").write_bytes(b"correct font contents")
             digest = hashlib.sha256((path / "font").read_bytes()).hexdigest()
 
             def run(*args):
-                return subprocess.run([self.shell, "check.sh", *args], cwd=path, capture_output=True).returncode
+                return subprocess.run([sys.executable, "-B", str(ROOT / "recovery/font_patch.py"), "check", *args], cwd=path, capture_output=True, env=dict(__import__("os").environ, PYTHONPATH=str(ROOT / "scripts"))).returncode
 
             self.assertEqual(run("ready"), 0)
             self.assertEqual(run("hash", "font", digest), 0)

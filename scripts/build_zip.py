@@ -15,6 +15,8 @@ from ext4 import Volume, EXT4_FT
 from fetch_assets import COMMIT, SOURCES, git_blob
 
 from extract_rom import BUILD, ROM, ROOT, extract, sha256
+from font_slots import payload as slot_payload
+from python_runtime import runtime_payload
 
 META = "META-INF/com/google/android/"
 MOUNT = "/tmp/jp-font-system"
@@ -115,47 +117,30 @@ def patch_xml(original):
     return result.encode("utf-8")
 
 
-# TWRP may supply Toybox or BusyBox. Check availability before touching system.
-# No sha1_check/set_perm: neither function exists in the supplied Android 11 updater.
+# Compatibility entry point; all file guards run in the bundled Python.
 CHECKER = b'''#!/sbin/sh
-set -eu
-BB=/sbin/toybox
-[ -x "$BB" ] || BB=/sbin/busybox
-[ -x "$BB" ] || { echo "TWRP Toybox or BusyBox is required" >&2; exit 1; }
-mode="$1"
-shift
-case "$mode" in
-  ready) "$BB" sha256sum /dev/null >/dev/null ;;
-  absent) [ ! -e "$1" ] && [ ! -L "$1" ] ;;
-  hash|optional)
-    file="$1"
-    shift
-    if [ "$mode" = optional ] && [ ! -e "$file" ] && [ ! -L "$file" ]; then exit 0; fi
-    [ -f "$file" ] && [ ! -L "$file" ] || exit 1
-    result=$("$BB" sha256sum "$file") || exit 1
-    actual=${result%% *}
-    for expected in "$@"; do
-      [ "$actual" != "$expected" ] || exit 0
-    done
-    echo "Unexpected SHA-256: $file" >&2
-    exit 1 ;;
-  *) exit 1 ;;
-esac
+exec /sbin/sh /tmp/jp-font-patch/run-python.sh check "$@"
 '''
 
 
-def updater(original, patched, infos, originals, restore=False):
+def updater(original, patched, infos, originals, restore=False, component="cjk", retained=None):
     props = dict(line.split("=", 1) for line in (BUILD / "build.prop").read_text().splitlines()
                  if "=" in line and not line.startswith("#"))
     fingerprint = props["ro.system.build.fingerprint"]
     check('"' not in fingerprint and "\\" not in fingerprint, "Unsafe fingerprint")
-    hashes = [hashlib.sha256(data).hexdigest() for data in (original, patched)]
     action = "Restore" if restore else "Install"
+    label = "CJK Sans 100-900 / Serif 200-900" if component == "cjk" else "Google Sans Flex 100-900 normal/italic"
+    patch_dir = "/tmp/jp-font-patch"
+    work_dir = "/tmp/jp-font-work"
+    xml = TARGET + "/etc/fonts.xml"
     script = [
-        f'ui_print("{action} CJK Sans 100-900 / Serif 200-900 (cronos)");',
+        f'ui_print("{action} {label} (cronos)");',
         'assert(getprop("ro.product.device") == "cronos" || getprop("ro.build.product") == "cronos" || abort("This ZIP is only for cronos."));',
+        'assert(package_extract_dir("runtime", "/tmp/jp-font-python"));',
+        'set_metadata("/tmp/jp-font-python/lib/ld-musl-armhf.so.1", "uid", 0, "gid", 0, "mode", 0755);',
+        f'assert(package_extract_dir("patch", "{patch_dir}"));',
         'assert(package_extract_file("check.sh", "/tmp/jp-font-check.sh"));',
-        'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "ready") == "0" || abort("TWRP Toybox or BusyBox with sha256sum is required."));',
+        'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "ready") == "0" || abort("Bundled ARMv7 Python could not start."));',
         f'ifelse(is_mounted("{MOUNT}"), assert(unmount("{MOUNT}")));',
         f'assert(mount("ext4", "EMMC", "/dev/block/platform/soc/by-name/system", "{MOUNT}", "rw") || mount("ext4", "EMMC", "/dev/block/platform/soc/11230000.mmc/by-name/system", "{MOUNT}", "rw") || abort("Cannot mount system read-write. Unmount System in TWRP and retry."));',
         f'assert(file_getprop("{TARGET}/build.prop", "ro.system.build.fingerprint") == "{fingerprint}" || abort("Wrong ROM build."));',
@@ -165,7 +150,11 @@ def updater(original, patched, infos, originals, restore=False):
         args = ", ".join(f'"{v}"' for v in (["optional" if optional else "hash", path] + expected))
         return f'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", {args}) == "0" || abort("File verification failed: {path}"));'
 
-    script.append(hash_check(TARGET + "/etc/fonts.xml", hashes))
+    script.extend([
+        f'assert(run_program("/sbin/sh", "{patch_dir}/run-python.sh", "prepare", "{xml}", "{patch_dir}", "{work_dir}") == "0" || abort("Font configuration verification failed; unsupported structure or modified owned family."));',
+    ])
+    for info in (retained or {}).values():
+        script.append(hash_check(TARGET + "/fonts/" + info["file"], [info["sha256"]]))
     # Never remove or overwrite a user's custom old TTC, even on restore.
     for info in originals.values():
         script.append(hash_check(TARGET + "/fonts/" + info["file"], [info["sha256"]], optional=True))
@@ -176,6 +165,7 @@ def updater(original, patched, infos, originals, restore=False):
     def stage(source, target, digest):
         temporary = target + ".jpfont-new"
         script.extend([
+            f'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "stageable", "{temporary}") == "0");',
             f'assert(package_extract_file("{source}", "{temporary}") || abort("Extraction failed; check free system space."));',
             hash_check(temporary, [digest]),
             f'set_metadata("{temporary}", "uid", 0, "gid", 0, "mode", 0644, "selabel", "u:object_r:system_file:s0");',
@@ -189,7 +179,11 @@ def updater(original, patched, infos, originals, restore=False):
         # Restore referenced fonts BEFORE returning to the stock XML.
         for info in originals.values():
             stage("system/fonts/" + info["file"], TARGET + "/fonts/" + info["file"], info["sha256"])
-    stage("system/etc/fonts.xml", TARGET + "/etc/fonts.xml", hashes[0 if restore else 1])
+    script.extend([
+        f'assert(run_program("/sbin/sh", "{patch_dir}/run-python.sh", "stage", "{xml}", "{patch_dir}", "{work_dir}") == "0" || abort("XML staging failed; configuration changed or insufficient space."));',
+        f'set_metadata("{xml}.jpfont-new", "uid", 0, "gid", 0, "mode", 0644, "selabel", "u:object_r:system_file:s0");',
+        f'assert(rename("{xml}.jpfont-new", "{xml}"));',
+    ])
     if not restore:
         # Every new reference is valid before deleting the old collections.
         for info in originals.values():
@@ -200,7 +194,7 @@ def updater(original, patched, infos, originals, restore=False):
         for info in infos.values():
             filename, digest = info["file"], info["sha256"]
             path = TARGET + "/fonts/" + filename
-            script.append(f'ifelse(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "hash", "{path}", "{digest}") == "0", delete("{path}"), ui_print("Keeping absent or modified font: {filename}"));')
+            script.append(f'ifelse(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "hash", "{path}", "{digest}") == "0" && run_program("/sbin/sh", "/tmp/jp-font-check.sh", "unreferenced", "{xml}", "{filename}") == "0", delete("{path}"), ui_print("Keeping absent, modified or referenced font: {filename}"));')
     script.extend([f'assert(unmount("{MOUNT}"));', 'ui_print("Done. Reboot system.");'])
     return ("\n".join(script) + "\n").encode()
 
@@ -222,6 +216,9 @@ def write_zip(path, contents):
 
 
 def main():
+    from build_latin import build_latin
+    from fetch_assets import verify_rom
+    verify_rom(ROM)
     prefix = extract()
     check(prefix == "/system", "This builder expects the verified cronos system-as-root layout")
     original = (BUILD / "fonts.original.xml").read_bytes()
@@ -285,20 +282,23 @@ def main():
         "updater_sha256": hashlib.sha256(binary).hexdigest(),
         "device_tested": False,
         "upstream_commit": COMMIT,
+        "ownership_format": 1,
+        "owned_slots": ["cjk-sc", "cjk-tc", "cjk-ja", "cjk-ko"],
     }
     dist = ROOT / "dist"
     dist.mkdir(exist_ok=True)
     shared = {META + "update-binary": binary, "check.sh": CHECKER,
               "verification.json": (json.dumps(report, ensure_ascii=False, indent=2) + "\n").encode()}
+    shared.update(runtime_payload())
     for required in ("NotoSans-OFL.txt", "NotoSerif-OFL.txt", "FONT-COPYRIGHT.txt"):
         check((ROOT / "licenses" / required).is_file(), f"Missing license notice: {required}")
-    for license_file in (ROOT / "licenses").glob("*.txt"):
-        shared["licenses/" + license_file.name] = license_file.read_bytes()
+    for name in ("NotoSans-OFL.txt", "NotoSerif-OFL.txt", "FONT-COPYRIGHT.txt"):
+        shared["licenses/" + name] = (ROOT / "licenses" / name).read_bytes()
     sums = []
     for restore in (False, True):
         contents = dict(shared)
         contents[META + "updater-script"] = updater(original, patched, infos, originals, restore)
-        contents["system/etc/fonts.xml"] = original if restore else patched
+        contents.update(recovery_payload(original, patched, "cjk", restore))
         if not restore:
             for filename in FONTS.values():
                 contents["system/fonts/" + filename] = (ROOT / filename).read_bytes()
@@ -310,8 +310,17 @@ def main():
         write_zip(path, contents)
         sums.append(f"{sha256(path)}  {path.name}")
         print(f"Verified: {path.name} ({path.stat().st_size:,} bytes)")
+    sums.extend(build_latin(original, binary, dist))
     (dist / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8")
     (dist / "cjk-verification.json").write_bytes(shared["verification.json"])
+
+
+def recovery_payload(original, patched, component, restore):
+    files = slot_payload(original, patched, component, restore)
+    for name in ("run-python.sh", "font_patch.py"):
+        files["patch/" + name] = (ROOT / "recovery" / name).read_bytes()
+    files["patch/font_slots.py"] = (ROOT / "scripts/font_slots.py").read_bytes()
+    return files
 
 
 if __name__ == "__main__":

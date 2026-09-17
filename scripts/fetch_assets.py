@@ -12,6 +12,21 @@ SOURCES = {
     "NotoSansCJK-VF.ttf.ttc": ("Sans", "cfeab111cec01c491c0120aeb905a86afaecea56"),
     "NotoSerifCJK-VF.ttf.ttc": ("Serif", "f2e98c60cee4f44de9f671d76d900ac84a50da14"),
 }
+LATIN_COMMIT = "3dc14e61f108f036db84188b9b405a67df9b7c88"
+LATIN_FILE = "GoogleSansFlex-Regular.ttf"
+LATIN_UPSTREAM_FILE = "GoogleSansFlex%5BGRAD%2CROND%2Copsz%2Cslnt%2Cwdth%2Cwght%5D.ttf"
+LATIN_URL = f"https://raw.githubusercontent.com/google/fonts/{LATIN_COMMIT}/ofl/googlesansflex/{LATIN_UPSTREAM_FILE}"
+LATIN_SHA256 = "c31a482fbecbf2e07e6890134d20078723aadf732c9b9c6c9a44f86f8265b6fe"
+LATIN_VERSION = "Version 4.005;[3fe7d0b9f]"
+
+
+def verify_latin(path):
+    if hashlib.sha256(path.read_bytes()).hexdigest() != LATIN_SHA256:
+        raise ValueError(f"Google Sans Flex SHA-256 mismatch; refusing to use or overwrite: {path}")
+
+
+def fetch_latin(root=ROOT):
+    fetch_verified(LATIN_URL, root / LATIN_FILE, verify_latin)
 
 ROM_NAME = "lineage-18.1-20260904-UNOFFICIAL-cronos.zip"
 ROM_REPO = "amazon-oss/releases"
@@ -72,6 +87,9 @@ def main():
             raise FileNotFoundError(f"Restore the tracked licenses/{name} file from Git")
     fetch_rom()
     fetch_fonts()
+    fetch_latin()
+    from python_runtime import fetch_runtime
+    fetch_runtime()
     print("All external build assets verified. Run: mise run build")
 
 

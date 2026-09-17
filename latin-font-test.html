@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>欧文システムフォントの確認</title>
+<style>
+body { margin: 16px; background: white; color: #111; font: 16px sans-serif; }
+h1 { font-size: 22px; }
+.sample { font-size: 26px; margin: 12px 0; overflow-wrap: anywhere; }
+.label { font: 14px sans-serif; color: #555; }
+</style>
+<h1>欧文システムフォントの確認</h1>
+<p>外部フォントは読み込みません。通常幅・幅75%、100〜900、通常体・イタリックを確認します。
+ブラウザによってシステムの sans-serif-condensed が選ばれない場合があります。</p>
+<p>Google Sans Flex: ABC abc 012 éñÅß ／ 補助フォールバック: Ελληνικά Кириллица ĈĜ
+／ CJK: 日本語 骨直令辻。導入前・導入後・片方のみ復元・両方復元で比較してください。</p>
+<main></main>
+<script>
+const main = document.querySelector('main');
+for (const family of ['sans-serif', 'sans-serif-condensed']) {
+  for (const style of ['normal', 'italic']) {
+    for (let weight = 100; weight <= 900; weight += 100) {
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = `${family} / ${weight} / ${style}`;
+      const sample = document.createElement('div');
+      sample.className = 'sample';
+      Object.assign(sample.style, {fontFamily: family, fontWeight: weight, fontStyle: style});
+      sample.textContent = 'Hamburgefontsiv ABC xyz 0123456789 éñÅß Ελληνικά Кириллица ĈĜ 日本語 骨直令辻';
+      main.append(label, sample);
+    }
+  }
+}
+for (const family of ['sans-serif-thin', 'sans-serif-light', 'sans-serif-medium', 'sans-serif-black',
+                      'sans-serif-condensed-light', 'sans-serif-condensed-medium', 'serif', 'monospace']) {
+  const sample = document.createElement('p');
+  sample.style.fontFamily = family;
+  sample.textContent = `${family}: ABC xyz 0123456789`;
+  main.append(sample);
+}
+</script>
+</html>

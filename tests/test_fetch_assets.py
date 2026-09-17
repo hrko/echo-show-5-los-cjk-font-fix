@@ -11,6 +11,24 @@ import fetch_assets
 
 
 class FetchAssetsTests(unittest.TestCase):
+    def test_latin_pinned_url_hash_reuse_and_mismatch(self):
+        data = b'public Google Sans Flex fixture'
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(fetch_assets, 'LATIN_SHA256', hashlib.sha256(data).hexdigest()), \
+                 patch.object(fetch_assets, 'urlopen', return_value=io.BytesIO(data)) as download:
+                fetch_assets.fetch_latin(root)
+                self.assertIn(fetch_assets.LATIN_COMMIT, download.call_args.args[0].full_url)
+                self.assertEqual(download.call_args.args[0].full_url, fetch_assets.LATIN_URL)
+                fetch_assets.fetch_latin(root)
+                self.assertEqual(download.call_count, 1)
+                target = root / fetch_assets.LATIN_FILE
+                target.write_bytes(b'changed')
+                with self.assertRaises(ValueError):
+                    fetch_assets.fetch_latin(root)
+                self.assertEqual(target.read_bytes(), b'changed')
+                self.assertEqual(download.call_count, 1)
+
     def test_existing_rom_reused_and_mismatch_preserved(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
