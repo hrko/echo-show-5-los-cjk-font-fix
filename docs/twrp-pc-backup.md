@@ -1,6 +1,8 @@
 # TWRP の System バックアップを PC に直接保存する
 
-Echo Show 5 第2世代（cronos）、TWRP `3.7.0_9-0`、Windows / PowerShell で確認した手順です。端末の内部ストレージにバックアップを一旦保存せず、TWRP の ADB バックアップストリームを PC に書き込みます。通常の Android のアプリバックアップとは別の形式です。
+TWRP の ADB バックアップストリームを使い、System のバックアップを PC に直接保存します。端末の内部ストレージに一時保存する必要はありません。通常の Android のアプリバックアップとは形式が異なります。
+
+取得と整合性検証は、Echo Show 5 第2世代（cronos）、TWRP `3.7.0_9-0`、Windows / PowerShell で確認しました。取得したバックアップからの復元は未実施です。
 
 ## 端末と保存先を確認する
 
@@ -33,7 +35,7 @@ adb -s $serial shell ls -l /tmp/twadbfifo
 adb -s $serial backup -f "$destination/system-before.ab" --twrp --compress system
 ```
 
-処理が終了するまで待ちます。ADB の `Now unlock your device and confirm the backup operation...` というメッセージだけでは進行・完了を判定できません。別の PowerShell で保存ファイルの増加とログを確認できます。
+処理が終了するまで待ちます。ADB の `Now unlock your device and confirm the backup operation...` というメッセージだけでは、処理の進行や完了は判定できません。別の PowerShell で `$serial` と `$destination` に同じ値を設定し、保存ファイルのサイズとログを確認してください。
 
 ```powershell
 Get-Item "$destination/system-before.ab" | Select-Object Length,LastWriteTime
@@ -50,13 +52,13 @@ mise exec -- uv run --locked --cache-dir .uv-cache python scripts/verify_adb_bac
 Get-FileHash "$destination/system-before.ab" -Algorithm SHA256
 ```
 
-[`verify_adb_backup.py`](../scripts/verify_adb_backup.py) は TWRP v3 ストリームの終端・エントリー数・制御ブロック CRC・ペイロード MD5・gzip CRC と終端を検証し、成功時に `system-before.verification.json` を作ります。System だけを指定した場合は `partition_count: 1` と `system.ext4.win` を確認してください。検証はバックアップからの実際の復元テストとは別です。
+[`verify_adb_backup.py`](../scripts/verify_adb_backup.py) は、TWRP v3 ストリームの終端・エントリー数・制御ブロック CRC・ペイロード MD5 と、gzip の CRC・終端を検証します。成功すると `system-before.verification.json` を作成します。System だけを指定した場合は、結果の `partition_count: 1` と `system.ext4.win` を確認してください。この検証で確認できるのはファイルの整合性で、実際に復元できることまでは確認できません。
 
 `build/` は Git 管理対象外です。バックアップは、検証完了まで削除しない保存先に保管してください。バイナリ本体には PowerShell のテキスト用リダイレクトを使わず、必ず ADB の `-f` で保存します。
 
 ## 0バイトで終了した場合
 
-今回、初回画面が開いたままでは ADB が終了コード0で戻ってもバックアップは0バイトでした。`/tmp/adb.log` には次のエラーがありました。
+2026-09-18 の検証では、初回の System 読み取り専用確認画面が開いたままだと、ADB が終了コード0で終了してもバックアップは0バイトでした。`/tmp/adb.log` には次のエラーがありました。
 
 ```text
 Unable to open TW_ADB_FIFO No such file or directory
@@ -73,11 +75,11 @@ Adb backup/restore failed
 adb -s $serial restore "$destination/system-before.ab"
 ```
 
-これはバックアップに含まれるパーティションを取得時点へ戻す操作です。この手順の `system` のみのバックアップなら System が対象です。現在のフォントだけを戻す通常の操作には、対応する restore ZIP を使います。
+このコマンドは、バックアップに含まれるパーティションを取得時点の状態に戻します。この手順では `system` だけを指定しているため、復元対象は System です。フォントパッチだけを取り除く場合は、対応する restore ZIP を使います。
 
 復元時も `/tmp/recovery.log` と `/tmp/adb.log` を保存し、完了表示だけでなく、fonts.xml・フォントのハッシュ、属性、Android の起動を確認してください。今回取得したバックアップからの復元実行は未実施です。
 
-## 今回の取得記録
+## 2026-09-18 の取得記録
 
 - 実施日: 2026-09-18（JST）
 - 端末: `G091P308301603TS` / cronos、TWRP `3.7.0_9-0`

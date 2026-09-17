@@ -3,7 +3,9 @@
 対象: Echo Show 5 第2世代 cronos（ADB `G091P308301603TS`）、TWRP `3.7.0_9-0`、Android 11 / LineageOS 18.1。
 System fingerprint: `google/lineage_cronos/cronos:11/RQ3A.211001.001/r0rt1z209050214:userdebug/test-keys`。
 
-証跡は `build/device-validation/20260918-serif-mono/`（Git 管理対象外）に保存しています。`tested-source.zip` と SHA-256 一覧、HEAD・作業ツリー差分・未追跡ファイル一覧、各段階の TWRP ログ・XML・フォントハッシュ・属性・Android 起動ログを含みます。未コミットのコードも対象です。ビルド時の `device_tested: false` は変更せず、実機で確認した ZIP と項目を本記録で区別します。
+証跡は `build/device-validation/20260918-serif-mono/`（Git 管理対象外）に保存しました。未コミットの変更を含む検証時のコードを `tested-source.zip` に保存し、SHA-256 一覧、HEAD、作業ツリーの差分、未追跡ファイル一覧も記録しています。各段階の TWRP ログ、XML、フォントのハッシュと属性、Android の起動ログも含みます。
+
+`device_tested: false` はビルド時の値を保持し、実機で確認した ZIP と確認項目はこの記録に記載しています。
 
 ## 対象 ZIP
 
@@ -22,7 +24,7 @@ PC 側の `SHA256SUMS.txt` と照合し、転送後・各フラッシュ直前�
 
 ## 初期状態とバックアップ
 
-初期状態は CJK＋欧文（CL）。XML SHA-256 は `118a64a407779fac7f991a383d3d087f84d05d866e4fcd0c8f5e5025cf8bab14`、System の空き容量は約1.7 GiBでした。
+初期状態は CJK＋欧文（CL）でした。XML の SHA-256 は `118a64a407779fac7f991a383d3d087f84d05d866e4fcd0c8f5e5025cf8bab14`、System の空き容量は約1.7 GiBでした。
 
 今回の初期状態を TWRP で PC にバックアップしました。
 
@@ -47,17 +49,17 @@ C＝CJK、L＝Google Sans Flex、R＝Noto Serif VF、M＝Google Sans Code VF。
 | 07-CLRM-to-CLR | mono restore | CLRM → CLR | 成功 |
 | 08-CLR-to-CL | serif restore | CLR → CL | 成功 |
 
-各段階で XML 全体が期待値とバイト単位で一致し、対象フォント28〜32ファイルのハッシュ・不要VFの不在、所有者 `0:0`、モード `0644`、SELinux `u:object_r:system_file:s0` を TWRP と Android の両方で確認しました。元 Roboto / RobotoCondensed 20ファイル、Noto Serif 4ファイル、DroidSansMono を保持しています。
+各段階で、XML 全体が期待値とバイト単位で一致することを確認しました。対象フォント28〜32ファイルのハッシュ、不要になった可変フォント（VF）の不在、所有者 `0:0`、モード `0644`、SELinux ラベル `u:object_r:system_file:s0` も、TWRP と Android の両方で確認しています。元の Roboto / RobotoCondensed 20ファイル、Noto Serif 4ファイル、DroidSansMono は保持しています。
 
 Android の `sys.boot_completed=1`、system_server / SystemUI の存在を確認しました。8起動の crash buffer は空で、保存したログのフォント・SELinux 関連候補はランチャーの時計フォントサイズの通知のみでした。
 
-初回の Android → TWRP 再接続はユーザーの再試行指示後に成功。1段階目の起動確認後にもPC側のADBデーモン接続が一時的に失敗しましたが、端末の正常起動・XML一致を再確認して2段階目から再開しました。これらは ZIP 適用エラーではありません。
+初回の Android から TWRP への再接続は、ユーザーの指示による再試行で成功しました。1段階目の起動確認後にも PC 側の ADB デーモンへの接続が一時的に失敗しましたが、端末の正常起動と XML の一致を再確認し、2段階目から再開しました。いずれも接続時の失敗で、ZIP の適用は成功しています。
 
 ## 再適用
 
 同じ TWRP 起動中に Serif / Mono それぞれ install を2回、restore を2回実行し、計8適用が成功しました。各操作後の XML・フォント・属性も一致し、`/tmp` のランタイム・作業領域を再利用できました。証跡は `repeat-serif-1`〜`4` と `repeat-mono-1`〜`4` です。
 
-2回目の restore に出る `Keeping absent, modified or referenced font` は、1回目で削除済みのVFに対するメッセージです。実際にファイルが存在しないことを別途確認しています。
+2回目の restore では、1回目で削除した VF に対して `Keeping absent, modified or referenced font` と表示されました。該当ファイルが存在しないことも、別途確認しています。
 
 ## 既存パッチ側からの独立復元
 
@@ -74,7 +76,9 @@ RM（Serif＋Monoのみ）と最後の CLRM で Android 起動も成功し、各
 
 ## Android のネイティブ描画
 
-`app_process` で検証用 `FontProbe` を起動し、Android の `Typeface.create(ファミリー名, …)`、`Paint`、`Canvas` で端末上のビットマップへ描画しました。フォントを同梱した APK や Web フォントは使っていません。検証対象はシステムの `serif` / `monospace`。参照側に限って実ファイル・可変軸を明示指定し、同じ座標・サイズ・文字列のピクセルを比較しました。
+システムの `serif` / `monospace` を検証するため、`app_process` で検証用の `FontProbe` を起動しました。Android の `Typeface.create(ファミリー名, …)`、`Paint`、`Canvas` を使い、端末上のビットマップに描画しています。フォントを同梱した APK や Web フォントは使っていません。
+
+比較用の参照画像は、フォントの実ファイルと可変軸を明示して描画しました。システムのファミリー名を指定した描画と、座標・サイズ・文字列を揃え、ピクセル単位で比較しています。
 
 - Noto Serif: 100〜900 × 通常・イタリックの18設定で参照描画と完全一致。全18設定の画像ハッシュが異なり、ウェイト・スタイル差を確認。
 - Google Sans Code: 300〜800 × 通常・イタリックの12設定で参照描画と完全一致。全12設定の画像ハッシュが異なり、全設定でASCII 95文字（U+0020〜U+007E）の個別送り幅が一致（許容差0.01 px）。
@@ -105,9 +109,9 @@ RM（Serif＋Monoのみ）と最後の CLRM で Android 起動も成功し、各
 
 全Unicode文字、全言語・アプリのレイアウト、全フォールバックのスタイル・ウェイト、実機の電源断・容量枯渇・ファイル破壊、バックアップからの復元は未検証です。既存 CJK・欧文の全描画設定を今回再検証したわけではありません。画像による確認はオフスクリーンのネイティブ Canvas と採取時の端末画面に限定します。
 
-## 最終状態
+## 検証終了時の状態
 
-ユーザー指定どおり、**CJK＋欧文＋Serif＋Mono の4種類すべてを適用して Android 起動済み**です。
+ユーザーの指定に従い、CJK＋欧文＋Serif＋Mono の4種類すべてを適用し、Android の起動を確認して終了しました。
 
 最後に Android を再起動し（`final-clean-boot/`）、ロケール別の参照描画を判定条件にした修正版テストが成功しました。再起動後・テスト終了後とも crash buffer は空で、採取したログにフォント読み込みエラーや SELinux denial はありません。最終32フォントのハッシュ・XML・属性も再照合済みです。テストプログラムの `app_process` は終了しており、検証 APK は追加していません。
 

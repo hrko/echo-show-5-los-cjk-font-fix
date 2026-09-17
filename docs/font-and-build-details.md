@@ -1,4 +1,4 @@
-# フォント設定・検証・開発の詳細
+# フォントの出典・設定とビルド・リリース手順
 
 [README に戻る](../README.md)
 
@@ -22,13 +22,13 @@
 | `GRAD` | 0 / 0 / 100 | 0 |
 | `ROND` | 0 / 0 / 100 | 0 |
 
-`opsz / GRAD / ROND` は公開版の既定値を明示します。ローカル調査済み Pixel 9 / CP3A.260905.009 の汎用 `google-sans-flex` もこの3軸を指定せず同じ既定値を使用しています。用途別の可変 display/body 設定は移植せず、文字サイズによる opsz の自動変更も行いません。
+`opsz / GRAD / ROND` には公開版の既定値を明示します。文字サイズに応じて `opsz` を自動変更する設定は行いません。
 
-これは独自の設定です。調査した Pixel の標準 sans-serif は Roboto であり、Google Sans Flex ではありません。Pixel 同梱版は 4.001、採用公開版は 4.005 です。
+参考に調査した Pixel 9 / CP3A.260905.009 の汎用 `google-sans-flex` も、この3軸を指定せず同じ既定値を使っていました。ただし、このパッチは Pixel のフォント設定を再現するものではありません。調査した Pixel の標準 `sans-serif` は Roboto で、同梱の Google Sans Flex は 4.001 でした。このパッチでは公開版 4.005 を使い、Pixel の用途別の display/body 設定は移植していません。
 
 Android 11 の `family` / `font weight/style` / `axis tag/stylevalue` を使い、両ファミリーに18エントリーずつ明示します。Android 17 の `family-list` / `supportedAxes` は使用しません。ウェイト別エイリアス、CJK の順序・言語指定は維持します。
 
-公開版の cmap は535文字で、元の各 Roboto フォントにある2,263コードポイントを含みません。ギリシャ文字・キリル文字・一部の拡張ラテン文字などを失わないよう、**元 Roboto / RobotoCondensed を削除せず、それぞれの `fallbackFor` を指定した補助ファミリーを登録**します。既存 CJK ファミリーの相対順序は変えません。使用文字が Google Sans Flex にない場合は Google Sans Flex の字形にはなりません。
+公開版の文字と字形の対応表（cmap）は535文字を収録しています。一方、元の各 Roboto フォントにある2,263コードポイントは含まれていません。ギリシャ文字・キリル文字・一部の拡張ラテン文字などを表示するため、元の Roboto / RobotoCondensed を残し、それぞれの `fallbackFor` を指定した補助ファミリーを登録します。既存 CJK ファミリーの相対順序は維持します。Google Sans Flex にない文字は、フォールバック先のフォントの字形で表示されます。
 
 ## Noto Serif / Google Sans Code の出典と設定
 
@@ -39,21 +39,23 @@ Google Sans Flex と同じ固定コミット `3dc14e61f108f036db84188b9b405a67df
 | serif | [Noto Serif](https://github.com/google/fonts/tree/3dc14e61f108f036db84188b9b405a67df9b7c88/ofl/notoserif) | `wght`: 100〜900、`wdth`: 100 固定 | 2.015 / 2.013 |
 | mono | [Google Sans Code](https://github.com/google/fonts/tree/3dc14e61f108f036db84188b9b405a67df9b7c88/ofl/googlesanscode) | `wght`: 300〜800 | 6.001 / 6.001 |
 
-通常体とイタリック体はそれぞれ独立した VF を使い、100刻みのウェイトを Android 11 の `font` / `axis` で登録します。この Google Sans Code 配布版には `MONO` 軸はありません。各ウェイト・スタイルでASCII文字の送り幅が等しいことをビルド時に検証します。フォールバック先の文字まで同じ幅になる保証はありません。
+通常体とイタリック体には、それぞれ独立した可変フォント（VF）を使います。ウェイトは100刻みで、Android 11 の `font` / `axis` に登録します。この Google Sans Code 配布版には `MONO` 軸はありません。ビルド時には、各ウェイト・スタイルで ASCII 文字の送り幅が等しいことを検証します。フォールバック先の文字まで同じ幅になる保証はありません。
 
-TTF は保存名のみ変更し、バイト列は変更しません。[named_fonts.py](../scripts/named_fonts.py) に URL・Git blob・軸・バージョンを固定し、検証 JSON には SHA-256・字形検証結果・収録文字差分を記録します。元の Noto Serif 4ファイルと DroidSansMono は残し、専用の `fallbackFor` を設定・ファイルハッシュを照合します。CJK の明朝体は CJK パッチの担当で、`serif-monospace` は置き換えません。
+TTF は保存名だけを変更し、バイト列は変更しません。[named_fonts.py](../scripts/named_fonts.py) に URL・Git blob・軸・バージョンを固定し、検証 JSON には SHA-256・字形の検証結果・収録文字の差分を記録します。
+
+元の Noto Serif 4ファイルと DroidSansMono は残し、専用の `fallbackFor` を設定します。これらの元ファイルもハッシュを照合します。CJK の明朝体は CJK パッチが担当し、`serif-monospace` は置き換えません。
 
 SIL OFL 1.1 の原文を [NotoSerifLatin-OFL.txt](../licenses/NotoSerifLatin-OFL.txt)、[GoogleSansCode-OFL.txt](../licenses/GoogleSansCode-OFL.txt) に保存し、Google Sans Code の[商標通知](../licenses/GoogleSansCode-TRADEMARKS.md)とともに ZIP に同梱します。ライセンスも公式の Git blob と照合します。
 
-Serif / Mono は2026-09-18に実機で導入・個別復元・再適用・4種類併用の起動を検証しました。ネイティブ描画30設定の参照画像一致、Google Sans Code のASCII等幅性、サンプルのロケール別フォールバックも確認しています。[検証記録](serif-mono-device-validation.md)を参照してください。日本語ロケールでは一部の記号・ギリシャ文字などにCJKフォントが選ばれ、元フォントとは字形・幅が異なる場合があります。System 空き容量は各パッチ単独で約10 MiB以上を推奨します。併用時は各パッチの必要量を合計してください。
+Serif・Mono は、2026-09-18 に実機で導入・個別復元・再適用と、4種類を併用した状態での起動を検証しました。ネイティブ描画30設定と参照画像との一致、Google Sans Code の ASCII 文字の等幅性、サンプル文字のロケール別フォールバックも確認しています。日本語ロケールでは一部の記号・ギリシャ文字などに CJK フォントが選ばれ、元フォントとは字形・幅が異なる場合があります。対象 ZIP と確認範囲は、[検証記録](serif-mono-device-validation.md)を参照してください。
 
 ## 独立適用の仕組みと検証
 
-XML 全体の導入時バックアップを戻す方式は、後から入れた別パッチまで巻き戻すため採用していません。各 ZIP は担当部分の元 ROM / 置換後ハッシュと復元用断片を持ち、現在の XML に担当部分だけを合成します。共通構造のハッシュ、ファイルのハッシュ、機種・ROM fingerprint、ステージング後のハッシュを検証してから切り替えます。
+各 ZIP は、XML 内の担当部分だけを変更・復元します。元 ROM と置換後のハッシュ、書き込み用の XML 断片を同梱し、共通構造・フォントファイル・機種・ROM fingerprint を検証します。書き込み前に準備したファイルのハッシュも照合してから切り替えます。XML 全体の導入時バックアップを戻すと、後から導入した別パッチまで取り除いてしまうため、この方式は採用していません。
 
-担当部分は欧文2箇所、CJK 4箇所（香港を繁体字側に含む）、serif 1箇所、mono 1箇所です。他の担当部分はそのまま保持するため、全パッチの組み合わせや他のフォントのバージョンを列挙する必要がありません。担当外のファミリー、エイリアス、コメント、順序は共通構造として固定します。将来の拡張契約・失敗時の扱いは [docs/patch-format.md](patch-format.md) を参照してください。
+担当部分は欧文2箇所、CJK 4箇所（香港を繁体字側に含む）、Serif 1箇所、Mono 1箇所です。他パッチの担当部分はそのまま保持するため、パッチの組み合わせや他のフォントのバージョンを列挙する必要はありません。どのパッチも担当しないファミリー、エイリアス、コメント、順序は、共通構造として固定します。担当範囲の定義・互換性・失敗時の扱いは、[独立フォントパッチ形式](patch-format.md)を参照してください。
 
-ホスト側では実際に同梱する recovery 用 Python を使い、serif/mono を含む実際の4パッチの全24導入順序と復元、再適用、競合・改変の拒否をテストします。TTF の軸・36通りの字形差・参照ファイル・ZIP 内容も検証します。これらは TWRP や Android の実機描画の検証ではありません。
+ホスト側では、ZIP に同梱するリカバリー用 Python スクリプトを実行し、4パッチの全24通りの導入順序と復元、再適用、競合・改変の拒否をテストします。TTF の軸、欧文の36設定の字形差、参照ファイル、ZIP の内容も検証します。これらのテストだけでは、TWRP 上の動作や Android の実機描画までは確認できません。
 
 実機の目視確認には [font-test.html](../font-test.html) と [latin-font-test.html](../latin-font-test.html) を利用できます。外部フォントは読み込みませんが、ブラウザ独自のフォント指定に影響されるため、設定画面などのネイティブ UI も確認してください。
 
@@ -61,20 +63,11 @@ XML 全体の導入時バックアップを戻す方式は、後から入れた�
 
 `main` への push 時には、[ci.yml](../.github/workflows/ci.yml) が静的チェック、入力ファイルの取得・検証、ビルド、テストを自動実行します。リリース時にも同じ静的チェックを実行します。
 
-mise と Python 3.14 が使用できる環境で実行します。依存関係は uv で管理します。
-初回は約590 MBのダウンロードと、少なくとも約4 GBの追加空き容量が必要です。
-
-```powershell
-mise install
-mise exec -- uv sync --locked --cache-dir .uv-cache
-mise run check
-mise run fetch-assets
-mise run build
-mise run test
-```
+環境の準備と実行コマンドは [README のビルド手順](../README.md#ビルド)を参照してください。依存関係は uv で管理します。
 
 `mise run check` は `scripts/`・`recovery/`・`tests/` を対象に Ruff による lint と ty による型チェックを実行します。Ruff のルールは 0.16.6 のデフォルトを基準に、`pyproject.toml` の `select` に個別コードで明示しています。Ruff 更新時もデフォルトの変更には追従せず、ルール一覧は明示的に見直します。個別には `mise run lint` / `mise run typecheck` を使えます。型チェックに必要な依存関係は `uv sync --locked` で自動同期するため、ROM やフォントのダウンロードは不要です。
-Ruff と ty は mise.toml でバージョンを固定しています。更新時は `mise use ruff@latest ty@latest --pin` を実行し、`mise run check` と `mise run test` で検証してください。
+
+Ruff と ty は `mise.toml` でバージョンを固定しています。更新時は `mise use ruff@latest ty@latest --pin` を実行し、`mise run check` と `mise run test` で検証してください。
 
 `fetch-assets` は対象 ROM、Noto Sans CJK / Serif CJK の可変 TTC、Google Sans Flex、Noto Serif VF、Google Sans Code VF、ARMv7 Python / musl を取得し、固定ハッシュを検証します。
 一致する既存ファイルは再利用し、異なるファイルがある場合は上書きせず中止します。
