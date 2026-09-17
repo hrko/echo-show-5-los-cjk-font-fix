@@ -13,7 +13,8 @@ Echo Show 5 **第2世代（cronos）** / LineageOS 18.1 向けの TWRP ZIP を�
 - `dist/verification.json`: 入力のハッシュ、軸の範囲、字形検証結果。
 - `font-test.html`: 外部フォントを使わない表示確認ページ。
 
-**実機へのフラッシュ・起動・表示は未検証です。** PC 上の検証と実機での確認を区別してください。
+**2026-09-17、対象実機で TWRP フラッシュ・Android 起動・日本語ホーム画面の表示を確認しました。**
+全ウェイトの描画と復元処理の実行は未検証です。詳細は [実機検証記録](DEVICE_VALIDATION.md) を参照してください。
 他の ROM・他の世代向けの汎用 ZIP ではありません。
 
 ## 再作成
@@ -54,7 +55,7 @@ XML の日本語 family 以外は元のバイト列を保持し、元の中国�
    生成 ZIP は署名していないため、TWRP の ZIP signature verification を有効にしている場合は解除が必要です。
 4. 成功表示を確認して System を再起動します。失敗した場合はエラーメッセージを確認し、成功扱いにしないでください。
 
-TWRP の `/sbin/sh` と、`sha256sum` を利用できる `/sbin/busybox` が必要です。
+TWRP の `/sbin/sh` と、`sha256sum` を利用できる `/sbin/toybox` または `/sbin/busybox` が必要です。
 フォント追加量は約92 MiBです。再インストール時は一時ファイルも必要なため、
 System に少なくとも約150 MiBの空きを推奨します。
 

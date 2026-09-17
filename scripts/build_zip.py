@@ -91,12 +91,13 @@ def patch_xml(original):
     return result.encode("utf-8")
 
 
-# TWRP supplies /sbin/sh and BusyBox. Check availability before touching system.
+# TWRP may supply Toybox or BusyBox. Check availability before touching system.
 # No sha1_check/set_perm: neither function exists in the supplied Android 11 updater.
 CHECKER = b'''#!/sbin/sh
 set -eu
-BB=/sbin/busybox
-[ -x "$BB" ] || { echo "TWRP /sbin/busybox is required" >&2; exit 1; }
+BB=/sbin/toybox
+[ -x "$BB" ] || BB=/sbin/busybox
+[ -x "$BB" ] || { echo "TWRP Toybox or BusyBox is required" >&2; exit 1; }
 mode="$1"
 shift
 case "$mode" in
@@ -129,7 +130,7 @@ def updater(original, patched, infos, restore=False):
         f'ui_print("{action} Japanese Sans 100-900 / Serif 200-900 (cronos)");',
         'assert(getprop("ro.product.device") == "cronos" || getprop("ro.build.product") == "cronos" || abort("This ZIP is only for cronos."));',
         'assert(package_extract_file("check.sh", "/tmp/jp-font-check.sh"));',
-        'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "ready") == "0" || abort("TWRP BusyBox with sha256sum is required."));',
+        'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "ready") == "0" || abort("TWRP Toybox or BusyBox with sha256sum is required."));',
         f'ifelse(is_mounted("{MOUNT}"), assert(unmount("{MOUNT}")));',
         f'assert(mount("ext4", "EMMC", "/dev/block/platform/soc/by-name/system", "{MOUNT}", "rw") || mount("ext4", "EMMC", "/dev/block/platform/soc/11230000.mmc/by-name/system", "{MOUNT}", "rw") || abort("Cannot mount system read-write. Unmount System in TWRP and retry."));',
         f'assert(file_getprop("{TARGET}/build.prop", "ro.system.build.fingerprint") == "{fingerprint}" || abort("Wrong ROM build."));',

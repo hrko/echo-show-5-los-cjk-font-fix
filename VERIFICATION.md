@@ -52,6 +52,8 @@ GitHub 上のファイルは `gh api` で取得・確認しました。
 - ホストの bash で SHA-256 ガードを実行し、一致・不一致・欠落・任意の既存ファイルの拒否をテスト。
   ホストテストでは BusyBox の呼出形式を模した shim を使い、実機 BusyBox の動作そのものは検証していません。
 
-ARM の update-binary を実機 recovery で実行してはいません。Edify の実行、書込み権限、
-端末側の空き容量、起動、Minikin/Skia/WebView での描画、全字形は未検証です。
-結果の詳細と SHA-256 は `dist/verification.json` に記録します。
+その後、2026-09-17 に対象実機で ARM update-binary / Edify の実行、書込み、起動を確認しました。
+実機の TWRP は BusyBox ではなく Toybox を搭載していたため、両方に対応するよう修正しました。
+詳細は [実機検証記録](DEVICE_VALIDATION.md) を参照してください。全ウェイト・全字形・復元の実行は未検証です。
+ビルド時の検証結果と SHA-256 は `dist/verification.json` に記録します。
+同ファイルの `device_tested: false` はビルド処理自体が実機テストを行わないことを示します。

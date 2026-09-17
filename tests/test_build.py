@@ -74,7 +74,8 @@ class RecoveryHashGuardTests(unittest.TestCase):
             # Actual /sbin/busybox remains a device-side prerequisite.
             (path / "bb.sh").write_text('#!/bin/sh\nexec "$@"\n', newline="\n")
             (path / "bb.sh").chmod(0o755)
-            (path / "check.sh").write_bytes(CHECKER.replace(b"BB=/sbin/busybox", b"BB=./bb.sh"))
+            (path / "check.sh").write_bytes(CHECKER.replace(
+                b'BB=/sbin/toybox\n[ -x "$BB" ] || BB=/sbin/busybox', b"BB=./bb.sh"))
             (path / "font").write_bytes(b"correct font contents")
             digest = hashlib.sha256((path / "font").read_bytes()).hexdigest()
 
