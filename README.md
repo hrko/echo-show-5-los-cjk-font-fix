@@ -1,38 +1,34 @@
 # Echo Show 5 CJK 可変フォント
 
-`lineage-18.1-20260904-UNOFFICIAL-cronos.zip` を元に、
-Echo Show 5 **第2世代（cronos）** / LineageOS 18.1 向けの TWRP ZIP を作成します。
-ゴシック体は **100〜900 の9段階**、明朝体は **200〜900 の8段階**です。
-明朝体の100は公式フォントの範囲外なので追加せず、要求時は200へのマッチングになります。
+Echo Show 5 **第2世代（cronos）/ LineageOS 18.1** の CJK フォントを、公式 Noto CJK 可変フォントへ置き換える TWRP ZIP です。
 
-日本語・韓国語・簡体字・繁体字・香港繁体字の両書体を公式の可変 TTC に切り替えます。
-`NotoSansCJK-Regular.ttc` と `NotoSerifCJK-Regular.ttc` は設定の切り替え後に削除します。
+- 対象 ROM: `lineage-18.1-20260904-UNOFFICIAL-cronos.zip`。他の ROM・世代には対応しません。
+- 対応言語: 日本語・韓国語・簡体字・繁体字（注音を含む）・香港繁体字。
+- ウェイト: ゴシック体は100〜900の9段階、明朝体は200〜900の8段階（100の指定は200にマッチ）。
 
-| XML の言語 | 可変 TTC の index | 字形 |
-| --- | ---: | --- |
-| `ja` | 0 | JP |
-| `ko` | 1 | KR |
-| `zh-Hans` | 2 | SC |
-| `zh-Hant,zh-Bopo` | 3 | TC（注音も維持） |
-| `zh-Hant-HK` | 4 | HK |
+対象実機で導入 → 復元 → 再導入と正常起動を確認済みです。日本語の全ウェイトの描画は検証済みですが、他の言語は未検証です。
 
-## 成果物
+## 導入・復元
 
-- `dist/cronos-cjk-fonts-install.zip`: 全 CJK の可変ゴシック体・明朝体を導入し、旧 TTC を削除。
-- `dist/cronos-cjk-fonts-restore.zip`: この ROM の元の TTC 2ファイルと fonts.xml を復元。
-- `dist/SHA256SUMS.txt`: ZIP の SHA-256。
-- `dist/cjk-verification.json`: 入力のハッシュ、軸の範囲、各ロケールの字形検証結果。
-- `font-test.html`: 言語を切り替えられる、外部フォントを使わない表示確認ページ。
+1. 対象 ROM が入っていることを確認し、**TWRP で System をバックアップ**します。
+2. `cronos-cjk-fonts-install.zip` と `cronos-cjk-fonts-restore.zip` を端末へ転送します。
+3. TWRP の Mount で System をアンマウントし、Install から `cronos-cjk-fonts-install.zip` を選びます。
+   ZIP は未署名のため、ZIP signature verification が有効なら解除してください。
+4. 成功表示を確認して System へ再起動します。
 
-**2026-09-17、全 CJK 版の実機適用・旧 TTC 削除・Android 正常起動を確認しました。**
-各ロケールの全ウェイト描画と、全 CJK 版の復元 ZIP の実行は未検証です。
-他の ROM・他の世代向けの汎用 ZIP ではありません。
+System の空き容量は**約160 MiB以上**を推奨します。
+TWRP の `/sbin/sh` と、`sha256sum` が使える `/sbin/toybox` または `/sbin/busybox` が必要です。
+想定外のデバイス・ROM・設定では処理を中止します。
 
-## 再作成
+戻す場合は TWRP で **`cronos-cjk-fonts-restore.zip`** をフラッシュします。
+`fonts.xml` が別の内容に変更されて復元を拒否された場合は、System バックアップで復元してください。
+処理に失敗した場合はエラーを確認し、再試行前にリカバリーを再起動してください。
+ROM 更新後の自動維持には対応していません。
 
-mise と Python 3.14 が使用できる環境で実行します。uv は `mise.toml` に固定し、
-Python バージョンは `.python-version`、依存関係は `pyproject.toml` と `uv.lock` で管理します。
-`uv sync` / `uv run` がプロジェクトの `.venv` を管理します。pip での手動導入は不要です。
+## ビルド
+
+mise と Python 3.14 が使用できる環境で実行します。依存関係は uv で管理します。
+初回は約585 MBのダウンロードと、少なくとも約4 GBの追加空き容量が必要です。
 
 ```powershell
 mise install
@@ -42,72 +38,42 @@ mise run build
 mise run test
 ```
 
-入力はリポジトリ直下の次の3ファイルです。
+`fetch-assets` は対象 ROM と Noto Sans CJK / Serif CJK の可変 TTC を取得し、固定ハッシュを検証します。
+一致する既存ファイルは再利用し、異なるファイルがある場合は上書きせず中止します。
 
-- `lineage-18.1-20260904-UNOFFICIAL-cronos.zip`
-- `NotoSansCJK-VF.ttf.ttc`（公式 Version 2.004、5ロケール共有）
-- `NotoSerifCJK-VF.ttf.ttc`（公式 Version 2.003、5ロケール共有）
+出力先は `dist/` です。
 
-`fetch-assets` は必要な外部アセット3ファイルをすべて取得・検証します。
-ROM は [公式リリース lineage-18.1-cronos-v0.4](https://github.com/amazon-oss/releases/releases/tag/lineage-18.1-cronos-v0.4)
-から Python 標準ライブラリの HTTPS 通信で取得し、固定 SHA-256 を照合します。
-フォントは GitHub の raw URL から固定コミットのファイルを取得し、Git blob ハッシュを照合します。
-GitHub CLI や認証設定は不要です。全アセットを一時ファイルへダウンロードし、検証後に正式な名前で保存します。
-既存ファイルが異なる場合は上書きせず中止します。
-一致する既存ファイルは再ダウンロードしません。初回の総ダウンロード量は約585 MBです。
-ライセンス類は Git に同梱済みで、fonts.xml・update-binary・復元用 TTC はビルド時に ROM から抽出します。
-フォントの取得元は Noto CJK の固定コミット
-[`f8d157532fbfaeda587e826d4cd5b21a49186f7c`](https://github.com/notofonts/noto-cjk/tree/f8d157532fbfaeda587e826d4cd5b21a49186f7c)
-にある `Sans/Variable/OTC/` と `Serif/Variable/OTC/` です。
-バージョン・ハッシュ・各ロケールのウェイト検証結果は、ビルド時に `dist/cjk-verification.json` へ記録します。
-大きい入力、`build/`、`dist/`、仮想環境は Git 管理対象外です。
-初回は Brotli をストリーム展開して約3.25 GBの ext4 イメージを `build/system.img` に生成します。
-ZIP 等を含め、少なくとも4 GB程度の追加空き容量を確保してください。
-2回目以降は入力 ROM の SHA-256 が一致する場合に展開済みイメージを再利用します。
-キャッシュを手作業で編集した場合は `build/system.img` を削除して再作成してください。
+| ファイル | 用途 |
+| --- | --- |
+| `cronos-cjk-fonts-install.zip` | 可変フォントの導入と旧フォントの削除 |
+| `cronos-cjk-fonts-restore.zip` | 元 ROM のフォントと設定への復元 |
+| `SHA256SUMS.txt` | ZIP の SHA-256 |
+| `cjk-verification.json` | 入力ハッシュ・ウェイト範囲・字形の検証結果 |
 
-`scripts/build_zip.py` が標準ライブラリの `zipfile` で ZIP を作成します。
-既存4つの CJK family を置換し、香港用を追加します。その他の XML は元のバイト列を保持します。
-削除する TTC が他の XML から参照されていないことも元 ROM 全体で検査します。
-同じ入力・Python/依存関係での再作成では ZIP の順序・時刻・権限も一定です。
-ビルドでは、元の4ロケールの収録文字を失わないこと、5ロケールの各ウェイトでサンプル文字の輪郭が変わること、
-生成 ZIP の内容と CRC を検証します。JSON の `device_tested: false` はビルド処理自体が実機テストを行わないことを示します。
+入力・`build/`・`dist/`・仮想環境は Git 管理対象外です。
+展開済みの `build/system.img` は再利用されます。手動で変更した場合は削除して再ビルドしてください。
 
-## TWRP で導入
+## リリース（メンテナー向け）
 
-1. この ZIP の元と同じ ROM が入っていることを確認します。インストーラーも build fingerprint を照合します。
-2. TWRP で System のバックアップを取得し、インストール用・復元用の両 ZIP を端末へ転送します。
-3. TWRP の Mount で System をアンマウントし、Install から `cronos-cjk-fonts-install.zip` を選びます。
-   生成 ZIP は署名していないため、TWRP の ZIP signature verification を有効にしている場合は解除が必要です。
-4. 成功表示を確認して System を再起動します。失敗した場合はエラーメッセージを確認し、成功扱いにしないでください。
+[release.yml](.github/workflows/release.yml) をタグ指定で手動実行すると、ビルド・テスト・ビルド証明の作成を経て、上記4ファイルをリリースに公開します。
+初回はワークフローをデフォルトブランチへマージし、Settings → General → Releases の **Enable release immutability** を有効にしてください。
 
-TWRP の `/sbin/sh` と、`sha256sum` を利用できる `/sbin/toybox` または `/sbin/busybox` が必要です。
-可変 TTC 2ファイルは合計約95.5 MiBです。旧 TTC の削除は最後に行うため、
-System に少なくとも約160 MiBの空きを推奨します。
-未変更の元 ROM または同じ全 CJK 版から導入できます。
+`v0.1.0` を公開するバージョンに置き換えて実行します。
 
-system パーティションは専用の `/tmp/jp-font-system` にマウントし、
-ROM で確認した `/system/etc/fonts.xml` と `/system/fonts/` をその中から参照します。
-デバイス、ROM、現在の XML のハッシュが想定と異なると中止します。
-導入時は同名の異なるフォントも上書きしません。
-各ファイルを一時名に展開してハッシュ・権限・SELinux ラベルを設定し、rename で置き換えます。
-XML の置換は両フォントの配置後、旧 TTC の削除は XML 置換後です。
-同名の旧 TTC が元 ROM と異なる場合は削除せず中止します。
-失敗時は専用マウントや一時ファイルが残る場合があります。
-リカバリー再起動でマウントは解除されます。一時ファイルは同じ処理の再実行で上書きされます。
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+gh workflow run release.yml --ref v0.1.0
+```
 
-## 表示確認と復元
+本文や prerelease 設定を指定する場合は、同じタグのドラフトを先に作成してください。
+失敗時はドラフトのまま残り、同じタグで再実行できます（同名アセットは置換）。公開済みリリースへの再実行はできません。
+実行中はタグやドラフトを編集・公開せず、アセットを手動追加しないでください。
 
-`font-test.html` をブラウザで開き、言語セレクターで5ロケールの各段階の太さを確認します。
-サンプル部分の `lang` 属性も選択した言語に切り替わります。
-必要なら PC 側で `mise exec -- uv run --locked --cache-dir .uv-cache python -m http.server 8000 --bind 0.0.0.0`
-を起動し、同じネットワークの端末から `http://PCのIPアドレス:8000/font-test.html` にアクセスします。
-この HTTP サーバーはカレントディレクトリを公開するので、確認後は Ctrl+C で終了してください。
-ブラウザ固有のフォント選択も影響するため、設定アプリなどの日本語表示も確認します。
-HTML での表示だけでは Android 全体の適用や全字形の正しさの証明にはなりません。
+ダウンロードした ZIP のビルド証明は次のコマンドで検証できます（`OWNER/REPO` はリポジトリ名に置換）。
+この証明は TWRP の ZIP 署名とは別です。
 
-戻す場合は TWRP で **`cronos-cjk-fonts-restore.zip`** をフラッシュします。
-復元 ZIP に同梱した元の TTC 2ファイルを先に復元し、元の XML に戻してから追加フォントを削除します。
-欠落・変更済みの追加フォントは復元を妨げず、変更済みファイルは残します。
-XML 自体が別の内容に変更されている場合は拒否するため、取得しておいた System バックアップで復元してください。
-ROM 更新への自動追従・維持処理は含めていません。
+```sh
+gh attestation verify cronos-cjk-fonts-install.zip --repo OWNER/REPO
+gh attestation verify cronos-cjk-fonts-restore.zip --repo OWNER/REPO
+```
