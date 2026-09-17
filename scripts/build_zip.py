@@ -130,7 +130,9 @@ def updater(original, patched, infos, originals, restore=False, component="cjk",
     fingerprint = props["ro.system.build.fingerprint"]
     check('"' not in fingerprint and "\\" not in fingerprint, "Unsafe fingerprint")
     action = "Restore" if restore else "Install"
-    label = "CJK Sans 100-900 / Serif 200-900" if component == "cjk" else "Google Sans Flex 100-900 normal/italic"
+    from named_fonts import COMPONENTS
+    label = {"cjk": "CJK Sans 100-900 / Serif 200-900", "latin": "Google Sans Flex 100-900 normal/italic",
+             **{key: config['label'] for key, config in COMPONENTS.items()}}[component]
     patch_dir = "/tmp/jp-font-patch"
     work_dir = "/tmp/jp-font-work"
     xml = TARGET + "/etc/fonts.xml"
@@ -314,6 +316,9 @@ def main():
         sums.append(f"{sha256(path)}  {path.name}")
         print(f"Verified: {path.name} ({path.stat().st_size:,} bytes)")
     sums.extend(build_latin(original, binary, dist))
+    from build_named import build_named
+    for component in ('serif', 'mono'):
+        sums.extend(build_named(original, binary, dist, component))
     (dist / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8")
     (dist / "cjk-verification.json").write_bytes(shared["verification.json"])
 

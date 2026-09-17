@@ -2,3 +2,5 @@ recovery/* text eol=lf
 scripts/font_slots.py text eol=lf
 # Preserve upstream license bytes for the pinned Git blob verification.
 licenses/GoogleSansFlex-* -text
+licenses/GoogleSansCode-* -text
+licenses/NotoSerifLatin-OFL.txt -text

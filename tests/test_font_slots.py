@@ -9,6 +9,7 @@ from pathlib import Path
 
 import test_build
 from build_latin import AXES, locations, patch_latin
+from build_named import patch_named
 from build_zip import patch_xml, recovery_payload
 from font_slots import OWNERS, compose_xml, payload, split_xml
 
@@ -68,8 +69,8 @@ class RecoveryComposerTests(unittest.TestCase):
     def setUpClass(cls):
         cls.patches = {
             'cjk': patch_xml(ORIGINAL), 'latin': patch_latin(ORIGINAL),
-            'serif': ORIGINAL.replace(b'NotoSerif-Regular.ttf', b'FutureSerif.ttf'),
-            'mono': ORIGINAL.replace(b'DroidSansMono.ttf', b'FutureMono.ttf'),
+            'serif': patch_named(ORIGINAL, 'serif'),
+            'mono': patch_named(ORIGINAL, 'mono'),
         }
 
     def run_patch(self, current, component, restore=False, stage=False, mutate=False):
@@ -99,8 +100,7 @@ class RecoveryComposerTests(unittest.TestCase):
             return 0, output
 
     def test_all_four_component_orders_and_reverse_restore(self):
-        # Includes prospective serif/mono patches that existing Latin/CJK ZIPs
-        # have never seen, using only the stable ownership contract.
+        # All four actual patches use the stable ownership contract.
         for order in itertools.permutations(OWNERS):
             current = ORIGINAL
             active = set()
@@ -120,7 +120,7 @@ class RecoveryComposerTests(unittest.TestCase):
             self.assertEqual(current, ORIGINAL)
 
     def test_idempotence_mixed_owned_state_and_stage(self):
-        for component in ('cjk', 'latin'):
+        for component in OWNERS:
             for current in (ORIGINAL, self.patches[component]):
                 for restore in (False, True):
                     status, data = self.run_patch(current, component, restore, stage=True)

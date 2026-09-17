@@ -4,7 +4,7 @@ ty = "0.0.78"
 uv = "0.12.9"
 
 [tasks.build]
-description = "Verify inputs and build independent CJK and Latin install/restore ZIPs"
+description = "Verify inputs and build independent CJK, Latin, serif and mono install/restore ZIPs"
 run = "uv run --locked --cache-dir .uv-cache python scripts/build_zip.py"
 
 [tasks.fetch-assets]

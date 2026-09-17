@@ -16,7 +16,7 @@ class BuiltZipTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.paths = {(component, mode): ROOT / 'dist' / f'cronos-{component}-fonts-{mode}.zip'
-                     for component in ('cjk', 'latin') for mode in ('install', 'restore')}
+                     for component in ('cjk', 'latin', 'serif', 'mono') for mode in ('install', 'restore')}
         if not all(path.exists() for path in cls.paths.values()):
             raise unittest.SkipTest('Run mise run build for archive integration tests')
         if not (ROOT / 'build/fonts.original.xml').exists():
@@ -30,6 +30,10 @@ class BuiltZipTests(unittest.TestCase):
                 fonts = {name for name in archive.namelist() if name.startswith('system/fonts/')}
                 if component == 'latin':
                     self.assertEqual(fonts, {'system/fonts/GoogleSansFlex-Regular.ttf'} if mode == 'install' else set())
+                elif component in ('serif', 'mono'):
+                    from named_fonts import COMPONENTS
+                    expected = {'system/fonts/' + f[0] for f in COMPONENTS[component]['fonts'].values()}
+                    self.assertEqual(fonts, expected if mode == 'install' else set())
                 else:
                     self.assertEqual(len(fonts), 2)
                     self.assertTrue(all('Noto' in name for name in fonts))
@@ -45,10 +49,12 @@ class BuiltZipTests(unittest.TestCase):
 
     def test_real_rom_transitions_reuse_recovery_workspace(self):
         from build_latin import patch_latin
+        from build_named import patch_named
         from build_zip import patch_xml
+        from font_slots import OWNERS, compose_xml, split_xml
         original = (ROOT / 'build/fonts.original.xml').read_bytes()
-        states = {(): original, ('cjk',): patch_xml(original), ('latin',): patch_latin(original),
-                  ('cjk', 'latin'): patch_latin(patch_xml(original))}
+        patches = {'cjk': patch_xml(original), 'latin': patch_latin(original),
+                   **{key: patch_named(original, key) for key in ('serif', 'mono')}}
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'fonts.xml').write_bytes(original)
@@ -56,6 +62,10 @@ class BuiltZipTests(unittest.TestCase):
             sequence = [('cjk', 'install'), ('latin', 'install'), ('cjk', 'restore'),
                         ('cjk', 'install'), ('latin', 'restore'), ('cjk', 'restore'),
                         ('latin', 'install'), ('latin', 'install'), ('latin', 'restore'), ('latin', 'restore')]
+            sequence += [(key, 'install') for key in OWNERS]
+            sequence += [('serif', 'install'), ('mono', 'install')]
+            sequence += [(key, 'restore') for key in ('latin', 'serif', 'cjk', 'mono')]
+            sequence += [('serif', 'restore'), ('mono', 'restore')]
             for component, mode in sequence:
                 with zipfile.ZipFile(self.paths[component, mode]) as archive:
                     for name in archive.namelist():
@@ -74,7 +84,12 @@ class BuiltZipTests(unittest.TestCase):
                     active.add(component)
                 else:
                     active.discard(component)
-                self.assertEqual((root / 'fonts.xml').read_bytes(), states[tuple(sorted(active))])
+                skeleton, slots = split_xml(original)
+                for key in active:
+                    changed = split_xml(patches[key])[1]
+                    for slot in OWNERS[key]:
+                        slots[slot] = changed[slot]
+                self.assertEqual((root / 'fonts.xml').read_bytes(), compose_xml(skeleton, slots))
 
 
 if __name__ == '__main__':

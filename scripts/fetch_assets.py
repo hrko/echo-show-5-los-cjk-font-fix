@@ -88,6 +88,8 @@ def main():
     fetch_rom()
     fetch_fonts()
     fetch_latin()
+    from named_fonts import fetch_named_fonts
+    fetch_named_fonts()
     from python_runtime import fetch_runtime
     fetch_runtime()
     print("All external build assets verified. Run: mise run build")
