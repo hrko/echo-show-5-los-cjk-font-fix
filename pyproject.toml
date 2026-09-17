@@ -1,5 +1,5 @@
 [project]
-name = "echo-show-5-lineageos-variable-fonts"
+name = "echo-show-lineageos-variable-fonts"
 version = "0.1.0"
 description = "Build and verify shared variable-font recovery ZIPs for Echo Show checkers, cronos and crown running LineageOS 18.1"
 requires-python = ">=3.12"

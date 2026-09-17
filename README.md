@@ -23,7 +23,7 @@ Echo Show の LineageOS 18.1（Android 11）に、可変フォントを導入す
 
 ## ZIP のダウンロード
 
-1. [最新リリース](https://github.com/hrko/echo-show-5-lineageos-variable-fonts/releases/latest)を開きます。
+1. [最新リリース](https://github.com/hrko/echo-show-lineageos-variable-fonts/releases/latest)を開きます。
 2. **Assets** から、使用するパッチの `echo-show-{component}-fonts-install.zip`（導入用）と `echo-show-{component}-fonts-restore.zip`（復元用）をダウンロードします。`{component}` は `cjk`・`latin`・`serif`・`mono` のいずれかです。日本語フォントを変更する場合は `cjk` を選びます。
 3. ダウンロードした ZIP は展開せず、以下の手順で端末へ転送して適用します。
 
