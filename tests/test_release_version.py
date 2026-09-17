@@ -1,9 +1,9 @@
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.validate_release_version import validate_version
 
@@ -58,7 +58,7 @@ class ReleaseVersionTests(unittest.TestCase):
             path = Path(directory) / "releases.json"
             path.write_text(json.dumps([[release("v1.0.0")], [release("v1.2.3")]]), encoding="utf-8")
             for version, code in (("1.2.4", 0), ("1.0.1", 1)):
-                result = subprocess.run([sys.executable, str(script), version, str(path)], capture_output=True, text=True)
+                result = subprocess.run([sys.executable, str(script), version, str(path)], capture_output=True, text=True, check=False)
                 self.assertEqual(result.returncode, code, result.stderr)
                 if code:
                     self.assertIn("allowed: v2.0.0, v1.3.0, v1.2.4", result.stderr)

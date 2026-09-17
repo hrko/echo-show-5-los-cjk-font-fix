@@ -1,16 +1,16 @@
 """Run the shipped Python composer, including future patch slots."""
 import itertools
-from pathlib import Path
-import sys
 import subprocess
+import sys
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import test_build
+from build_latin import AXES, locations, patch_latin
 from build_zip import patch_xml, recovery_payload
-from build_latin import patch_latin, locations, AXES
-from font_slots import split_xml, compose_xml, payload, OWNERS
+from font_slots import OWNERS, compose_xml, payload, split_xml
 
 ORIGINAL = test_build.XMLTests.ORIGINAL.replace(b'    <family lang="en">', b'''    <family name="sans-serif">
         <font weight="400" style="normal">Roboto-Regular.ttf</font>
@@ -42,8 +42,9 @@ class SlotTests(unittest.TestCase):
         self.assertEqual(len(list(locations())), 36)
         for family, weight, style, axes in locations():
             font = tree.find(f"./family[@name='{family}']/font[@weight='{weight}'][@style='{style}']")
+            assert font is not None
             self.assertEqual(font.attrib, {'weight': str(weight), 'style': style})
-            self.assertEqual({a.get('tag'): float(a.get('stylevalue')) for a in font}, axes)
+            self.assertEqual({a.get('tag'): float(a.attrib['stylevalue']) for a in font}, axes)
             for tag, value in axes.items():
                 self.assertLessEqual(AXES[tag][0], value)
                 self.assertLessEqual(value, AXES[tag][2])
@@ -52,10 +53,12 @@ class SlotTests(unittest.TestCase):
         # Roboto remains reachable for characters absent from the public font.
         for name in ('sans-serif', 'sans-serif-condensed'):
             stock = ET.fromstring(ORIGINAL).find(f"./family[@name='{name}']")
+            assert stock is not None
             fallback = [f for fam in tree.findall('family') if fam.get('name') is None
                         for f in fam if f.get('fallbackFor') == name]
             self.assertEqual(len(stock), len(fallback))
             for before, after in zip(stock, fallback):
+                assert before.text is not None and after.text is not None
                 self.assertEqual(before.text.strip(), after.text.strip())
                 self.assertEqual(dict(before.attrib, fallbackFor=name), after.attrib)
 
@@ -80,7 +83,7 @@ class RecoveryComposerTests(unittest.TestCase):
                 target.write_bytes(data)
             def run(mode):
                 return subprocess.run([sys.executable, '-B', 'patch/font_patch.py', mode, 'fonts.xml', 'patch', 'work'],
-                                      cwd=root, capture_output=True)
+                                      cwd=root, capture_output=True, check=False)
             result = run('prepare')
             if result.returncode:
                 return result.returncode, result.stderr

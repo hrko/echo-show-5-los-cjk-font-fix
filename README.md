@@ -67,7 +67,7 @@ XML 全体の導入時バックアップを戻す方式は、後から入れた�
 
 ## ビルド
 
-`main` への push 時には、[ci.yml](.github/workflows/ci.yml) が入力ファイルの取得・検証、ビルド、テストを自動実行します。
+`main` への push 時には、[ci.yml](.github/workflows/ci.yml) が静的チェック、入力ファイルの取得・検証、ビルド、テストを自動実行します。リリース時にも同じ静的チェックを実行します。
 
 mise と Python 3.14 が使用できる環境で実行します。依存関係は uv で管理します。
 初回は約590 MBのダウンロードと、少なくとも約4 GBの追加空き容量が必要です。
@@ -75,10 +75,14 @@ mise と Python 3.14 が使用できる環境で実行します。依存関係�
 ```powershell
 mise install
 mise exec -- uv sync --locked --cache-dir .uv-cache
+mise run check
 mise run fetch-assets
 mise run build
 mise run test
 ```
+
+`mise run check` は `scripts/`・`recovery/`・`tests/` を対象に Ruff による lint と ty による型チェックを実行します。Ruff のルールは 0.16.6 のデフォルトを基準に、`pyproject.toml` の `select` に個別コードで明示しています。Ruff 更新時もデフォルトの変更には追従せず、ルール一覧は明示的に見直します。個別には `mise run lint` / `mise run typecheck` を使えます。型チェックに必要な依存関係は `uv sync --locked` で自動同期するため、ROM やフォントのダウンロードは不要です。
+Ruff と ty は mise.toml でバージョンを固定しています。更新時は `mise use ruff@latest ty@latest --pin` を実行し、`mise run check` と `mise run test` で検証してください。
 
 `fetch-assets` は対象 ROM、Noto Sans CJK / Serif CJK の可変 TTC、Google Sans Flex、ARMv7 Python / musl を取得し、固定ハッシュを検証します。
 一致する既存ファイルは再利用し、異なるファイルがある場合は上書きせず中止します。

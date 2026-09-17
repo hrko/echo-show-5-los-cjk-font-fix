@@ -5,13 +5,12 @@ import json
 import re
 from pathlib import Path
 
-
 VERSION_PATTERN = re.compile(r"v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 
 
 def parse_version(value: str) -> tuple[int, int, int] | None:
     match = VERSION_PATTERN.fullmatch(value)
-    return tuple(map(int, match.groups())) if match else None
+    return (int(match[1]), int(match[2]), int(match[3])) if match else None
 
 
 def validate_version(version: str, releases: list[dict]) -> None:

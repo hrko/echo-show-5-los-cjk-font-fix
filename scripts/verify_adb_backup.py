@@ -5,10 +5,10 @@ Reads only; writes a sidecar report after the entire stream passes validation.
 """
 import hashlib
 import json
-from pathlib import Path
 import struct
 import sys
 import zlib
+from pathlib import Path
 
 
 def require(ok, message):

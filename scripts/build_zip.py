@@ -1,5 +1,4 @@
 """Build deterministic, ROM-specific install/restore recovery ZIPs using Python."""
-from pathlib import Path
 import copy
 import hashlib
 import io
@@ -9,13 +8,12 @@ import stat
 import xml.etree.ElementTree as ET
 import zipfile
 
+from ext4 import EXT4_FT, Volume
+from extract_rom import BUILD, ROM, ROOT, extract, sha256
+from fetch_assets import COMMIT, SOURCES, git_blob
+from font_slots import payload as slot_payload
 from fontTools.pens.recordingPen import RecordingPen
 from fontTools.ttLib import TTCollection
-from ext4 import Volume, EXT4_FT
-from fetch_assets import COMMIT, SOURCES, git_blob
-
-from extract_rom import BUILD, ROM, ROOT, extract, sha256
-from font_slots import payload as slot_payload
 from python_runtime import runtime_payload
 
 META = "META-INF/com/google/android/"
@@ -99,16 +97,19 @@ def patch_xml(original):
             if kind == "serif":
                 attrs["fallbackFor"] = "serif"
             check(font.tag == "font" and font.attrib == attrs and len(font) == 0
-                  and font.text.strip() == ORIGINAL_FONTS[kind], "Unexpected original CJK font")
+                  and (font.text or "").strip() == ORIGINAL_FONTS[kind], "Unexpected original CJK font")
         replacement = family_xml(lang, index)
         if index == 3:
             replacement = family_xml(HK_LOCALE, 4) + "\n    " + replacement
-        result, count = re.subn(r'<family lang="' + re.escape(lang) + r'">.*?</family>', replacement, result, flags=re.S)
+        result, count = re.subn(r'<family lang="' + re.escape(lang) + r'">.*?</family>', replacement, result, flags=re.DOTALL)
         check(count == 1, f"Ambiguous {lang} XML replacement")
     check(not any(name in result for name in ORIGINAL_FONTS.values()), "Remaining reference to a removed TTC")
     after = ET.fromstring(result)
     restored = copy.deepcopy(after)
-    restored.remove(restored.find(f"./family[@lang='{HK_LOCALE}']"))
+    hk = restored.find(f"./family[@lang='{HK_LOCALE}']")
+    if hk is None:
+        raise ValueError("Missing generated HK family")
+    restored.remove(hk)
     for index, old in enumerate(before):
         if old.tag == "family" and old.get("lang") in LOCALES:
             restored.remove(restored[index])
@@ -204,7 +205,7 @@ def write_zip(path, contents):
         for name, data in sorted(contents.items()):
             entry = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
             entry.create_system = 3
-            mode = 0o755 if name.endswith("update-binary") or name.endswith(".sh") else 0o644
+            mode = 0o755 if name.endswith(("update-binary", ".sh")) else 0o644
             entry.external_attr = (stat.S_IFREG | mode) << 16
             entry.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(entry, data, compresslevel=9)
@@ -266,6 +267,8 @@ def main():
         audit_xml("/")
         check(audited_xml == ["/system/etc/fonts.xml"], f"Other XML references old TTC: {audited_xml}")
         for font in ET.fromstring(patched).iter("font"):
+            if font.text is None:
+                raise ValueError("Missing font filename")
             filename = font.text.strip()
             if filename not in FONTS.values():
                 volume.inode_at("/system/fonts/" + filename)

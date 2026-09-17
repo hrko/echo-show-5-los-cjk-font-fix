@@ -101,6 +101,9 @@ jobs:
         with:
           cache: false
 
+      - name: Run static checks
+        run: mise run check
+
       - name: Fetch and verify build inputs
         run: mise run fetch-assets
 

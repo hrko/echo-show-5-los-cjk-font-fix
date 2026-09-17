@@ -6,13 +6,19 @@ import re
 import xml.etree.ElementTree as ET
 
 from ext4 import Volume
+from extract_rom import BUILD, ROM, ROOT, sha256
+from fetch_assets import (
+    LATIN_COMMIT,
+    LATIN_FILE,
+    LATIN_SHA256,
+    LATIN_URL,
+    LATIN_VERSION,
+    git_blob,
+    verify_latin,
+)
+from font_slots import compose_xml, split_xml
 from fontTools.pens.recordingPen import RecordingPen
 from fontTools.ttLib import TTFont
-
-from extract_rom import ROOT, BUILD, ROM, sha256
-from fetch_assets import (LATIN_FILE, LATIN_COMMIT, LATIN_VERSION, LATIN_URL,
-                          LATIN_SHA256, verify_latin, git_blob)
-from font_slots import split_xml, compose_xml
 
 WIDTHS = {"sans-serif": 100, "sans-serif-condensed": 75}
 DEFAULTS = {"opsz": 18, "GRAD": 0, "ROND": 0}
@@ -52,12 +58,14 @@ def patch_latin(original):
         key = 'latin-sans' if family == 'sans-serif' else 'latin-condensed'
         lines.extend([f'    <!-- font-slot: {key} fallback -->', '    <family>'])
         for item in old:
+            if item.text is None:
+                raise ValueError("Missing stock Latin font filename")
             attributes = dict(item.attrib, fallbackFor=family)
             attrs = ' '.join(f'{name}="{value}"' for name, value in attributes.items())
             lines.append(f'        <font {attrs}>{item.text.strip()}</font>')
         lines.append('    </family>')
         text, count = re.subn(r'<family name="' + family + r'">.*?</family>',
-                              "\n".join(lines), text, flags=re.S)
+                              "\n".join(lines), text, flags=re.DOTALL)
         check(count == 1, "Ambiguous Latin replacement")
     result = text.encode()
     skeleton, stock = split_xml(original)
@@ -79,6 +87,8 @@ def font_info(path):
         axes = {a.axisTag: [a.minValue, a.defaultValue, a.maxValue] for a in font['fvar'].axes}
         check(axes == AXES, "Unexpected public font axis ranges/defaults")
         cmap = font.getBestCmap()
+        if cmap is None:
+            raise ValueError("Missing Unicode cmap")
         samples = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?éñÅß"
         check(all(ord(c) in cmap for c in samples), "Missing Latin sample glyphs")
         outlines = {}
@@ -98,7 +108,7 @@ def font_info(path):
 
 
 def build_latin(original, binary, dist):
-    from build_zip import META, CHECKER, check, updater, write_zip, recovery_payload
+    from build_zip import CHECKER, META, check, recovery_payload, updater, write_zip
     patched = patch_latin(original)
     info = font_info(ROOT / LATIN_FILE)
     stock = ET.fromstring(original)
@@ -106,17 +116,30 @@ def build_latin(original, binary, dist):
     coverage = {}
     with TTFont(ROOT / LATIN_FILE) as new, (BUILD / 'system.img').open('rb') as stream:
         volume = Volume(stream)
-        cmap = set(new.getBestCmap())
+        new_cmap = new.getBestCmap()
+        if new_cmap is None:
+            raise ValueError("Missing Unicode cmap")
+        cmap = set(new_cmap)
         for family in WIDTHS:
-            for item in stock.find(f"./family[@name='{family}']"):
+            stock_family = stock.find(f"./family[@name='{family}']")
+            if stock_family is None:
+                raise ValueError(f"Missing stock family: {family}")
+            for item in stock_family:
+                if item.text is None:
+                    raise ValueError("Missing stock font filename")
                 name = item.text.strip()
                 data = volume.inode_at('/system/fonts/' + name).open().read()
                 retained[name] = {"file": name, "sha256": hashlib.sha256(data).hexdigest()}
                 with TTFont(io.BytesIO(data)) as old:
-                    missing = sorted(set(old.getBestCmap()) - cmap)
+                    old_cmap = old.getBestCmap()
+                    if old_cmap is None:
+                        raise ValueError(f"Missing Unicode cmap: {name}")
+                    missing = sorted(set(old_cmap) - cmap)
                     coverage[name] = [f"U+{cp:04X}" for cp in missing]
         # All unchanged file references must still resolve in the stock image.
         for item in ET.fromstring(patched).iter('font'):
+            if item.text is None:
+                raise ValueError("Missing font filename")
             if item.text.strip() != LATIN_FILE:
                 volume.inode_at('/system/fonts/' + item.text.strip())
     report = {"component": "latin", "device_tested": False,

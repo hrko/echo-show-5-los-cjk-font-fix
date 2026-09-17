@@ -1,13 +1,12 @@
 """Exercise the shipped recovery payload against the real ROM XML after a build."""
 import hashlib
 import json
-from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 import zipfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -45,8 +44,8 @@ class BuiltZipTests(unittest.TestCase):
                     self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(), expected, name)
 
     def test_real_rom_transitions_reuse_recovery_workspace(self):
-        from build_zip import patch_xml
         from build_latin import patch_latin
+        from build_zip import patch_xml
         original = (ROOT / 'build/fonts.original.xml').read_bytes()
         states = {(): original, ('cjk',): patch_xml(original), ('latin',): patch_latin(original),
                   ('cjk', 'latin'): patch_latin(patch_xml(original))}
@@ -68,7 +67,7 @@ class BuiltZipTests(unittest.TestCase):
                         path.write_bytes(data)
                 for action in ('prepare', 'stage'):
                     result = subprocess.run([sys.executable, '-B', 'patch/font_patch.py', action,
-                                             'fonts.xml', 'patch', 'work'], cwd=root, capture_output=True)
+                                             'fonts.xml', 'patch', 'work'], cwd=root, capture_output=True, check=False)
                     self.assertEqual(result.returncode, 0, (component, mode, action, result.stderr))
                 (root / 'fonts.xml.jpfont-new').replace(root / 'fonts.xml')
                 if mode == 'install':

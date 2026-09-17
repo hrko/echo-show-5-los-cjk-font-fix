@@ -32,7 +32,7 @@ def split_xml(data):
                     r' fallback -->\n^    <family>\n.*?^    </family>\n)?')
         if key == "cjk-tc":
             pattern = r'(?:^    <family lang="zh-Hant-HK">\n.*?^    </family>\n)?' + pattern
-        def replace(match):
+        def replace(match, key=key):
             fragment = match[0]
             families = 1 + int('<!-- font-slot: ' + key + ' fallback -->' in fragment)
             if key == 'cjk-tc' and fragment.startswith('    <family lang="zh-Hant-HK">'):
@@ -41,7 +41,7 @@ def split_xml(data):
                 raise ValueError(f'Invalid family boundary: {key}')
             slots[key] = match[0].encode()
             return f"@@FONT-SLOT {key}@@\n"
-        text, count = re.subn(pattern, replace, text, flags=re.M | re.S)
+        text, count = re.subn(pattern, replace, text, flags=re.MULTILINE | re.DOTALL)
         if count != 1:
             raise ValueError(f"Expected exactly one slot: {key}")
     return text.encode(), slots

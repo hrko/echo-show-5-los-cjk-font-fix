@@ -1,18 +1,17 @@
 import hashlib
-import re
-from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
 import xml.etree.ElementTree as ET
 import zipfile
+from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from build_zip import CHECKER, META, patch_xml, write_zip, updater
+# The script imports require the search path configured above.
+from build_zip import META, patch_xml, updater, write_zip
 
 
 class XMLTests(unittest.TestCase):
@@ -40,7 +39,7 @@ class XMLTests(unittest.TestCase):
 
     def test_preserves_surrounding_bytes_and_uses_real_ranges(self):
         result = patch_xml(self.ORIGINAL)
-        before, rest = self.ORIGINAL.split(b'<family lang="zh-Hans">')
+        before, _rest = self.ORIGINAL.split(b'<family lang="zh-Hans">')
         after = self.ORIGINAL.split(b'<alias', 1)[1]
         self.assertTrue(result.startswith(before))
         self.assertTrue(result.endswith(after))
@@ -49,15 +48,18 @@ class XMLTests(unittest.TestCase):
         tree = ET.fromstring(result)
         for lang, index in {'ja': '0', 'ko': '1', 'zh-Hans': '2', 'zh-Hant,zh-Bopo': '3', 'zh-Hant-HK': '4'}.items():
             family = tree.find(f"./family[@lang='{lang}']")
+            assert family is not None
             sans = [f for f in family if not f.get("fallbackFor")]
             serif = [f for f in family if f.get("fallbackFor") == "serif"]
-            self.assertEqual([int(f.get("weight")) for f in sans], list(range(100, 901, 100)))
-            self.assertEqual([int(f.get("weight")) for f in serif], list(range(200, 901, 100)))
+            self.assertEqual([int(f.attrib["weight"]) for f in sans], list(range(100, 901, 100)))
+            self.assertEqual([int(f.attrib["weight"]) for f in serif], list(range(200, 901, 100)))
             self.assertEqual({f.text for f in sans}, {'NotoSansCJK-VF.ttf.ttc'})
             self.assertEqual({f.text for f in serif}, {'NotoSerifCJK-VF.ttf.ttc'})
             for font in family:
                 self.assertEqual(font.get('index'), index)
-                self.assertEqual(font.get("weight"), font.find("axis").get("stylevalue"))
+                axis = font.find("axis")
+                assert axis is not None
+                self.assertEqual(font.get("weight"), axis.get("stylevalue"))
                 self.assertNotIn("postScriptName", font.attrib)
 
     def test_rejects_unexpected_configuration(self):
@@ -122,7 +124,7 @@ class RecoveryHashGuardTests(unittest.TestCase):
             digest = hashlib.sha256((path / "font").read_bytes()).hexdigest()
 
             def run(*args):
-                return subprocess.run([sys.executable, "-B", str(ROOT / "recovery/font_patch.py"), "check", *args], cwd=path, capture_output=True, env=dict(__import__("os").environ, PYTHONPATH=str(ROOT / "scripts"))).returncode
+                return subprocess.run([sys.executable, "-B", str(ROOT / "recovery/font_patch.py"), "check", *args], cwd=path, capture_output=True, check=False, env=dict(__import__("os").environ, PYTHONPATH=str(ROOT / "scripts"))).returncode
 
             self.assertEqual(run("ready"), 0)
             self.assertEqual(run("hash", "font", digest), 0)

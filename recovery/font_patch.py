@@ -3,7 +3,7 @@ import os
 import stat
 import sys
 
-from font_slots import SLOTS, OWNERS, split_xml, compose_xml, digest
+from font_slots import OWNERS, SLOTS, compose_xml, digest, split_xml
 
 
 def regular(path):

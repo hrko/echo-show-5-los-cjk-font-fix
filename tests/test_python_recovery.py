@@ -2,17 +2,17 @@
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
-import sys
 import tempfile
 import unittest
+from pathlib import Path
 
+from build_zip import patch_xml, recovery_payload
+from python_runtime import ASSETS, CACHE, runtime_payload, verify
 from test_font_slots import ORIGINAL
-from build_zip import recovery_payload, patch_xml
-from python_runtime import runtime_payload, verify, ASSETS, CACHE
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('font_patch', ROOT / 'recovery/font_patch.py')
+assert spec is not None and spec.loader is not None
 recovery = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(recovery)
 

@@ -2,9 +2,9 @@
 import hashlib
 import io
 import json
-from pathlib import Path
 import struct
 import tarfile
+from pathlib import Path
 
 from fetch_assets import fetch_verified
 
@@ -65,19 +65,22 @@ def runtime_payload():
                     continue
                 target = None
                 if name.startswith('python3-'):
-                    if n in ('usr/bin/python3.12', 'usr/lib/libpython3.12.so.1.0'):
+                    if n in ('usr/bin/python3.12', 'usr/lib/libpython3.12.so.1.0') or n.startswith('usr/lib/python3.12/') and (
+                        n.endswith(('.py', '/LICENSE.txt'))
+                        or (n.startswith('usr/lib/python3.12/lib-dynload/')
+                            and n.rsplit('/', 1)[1].startswith(HASH_MODULES))
+                    ):
                         target = 'runtime/' + n
-                    elif n.startswith('usr/lib/python3.12/'):
-                        if n.endswith('.py') or n.endswith('/LICENSE.txt'):
-                            target = 'runtime/' + n
-                        elif n.startswith('usr/lib/python3.12/lib-dynload/') and n.rsplit('/', 1)[1].startswith(HASH_MODULES):
-                            target = 'runtime/' + n
                 elif name.endswith('.apk') and n == 'lib/ld-musl-armhf.so.1':
                     target = 'runtime/' + n
                 elif n == 'musl-1.2.5/COPYRIGHT':
                     target = 'licenses/musl-COPYRIGHT.txt'
                 if target:
-                    files[target] = archive.extractfile(entry).read()
+                    content = archive.extractfile(entry)
+                    if content is None:
+                        raise ValueError(f'Missing runtime archive content: {entry.name}')
+                    with content:
+                        files[target] = content.read()
     # Materialize the libc symlink as regular bytes: recovery ZIP extraction
     # does not reliably preserve symbolic links.
     files['runtime/lib/libc.musl-armv7.so.1'] = files['runtime/lib/ld-musl-armhf.so.1']

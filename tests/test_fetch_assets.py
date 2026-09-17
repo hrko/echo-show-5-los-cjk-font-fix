@@ -1,9 +1,9 @@
 import hashlib
 import io
-from pathlib import Path
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
@@ -49,7 +49,7 @@ class FetchAssetsTests(unittest.TestCase):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 target = root / fetch_assets.ROM_NAME
-                def download(request, timeout):
+                def download(request, timeout, mode=mode, target=target):
                     self.assertIn(fetch_assets.ROM_TAG, request.full_url)
                     self.assertTrue(request.full_url.startswith('https://'))
                     if mode == 'interrupted':

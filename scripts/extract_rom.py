@@ -1,7 +1,8 @@
 """Read a full Android block OTA; never mount or modify the source ROM."""
-from pathlib import Path
 import hashlib
 import zipfile
+from itertools import pairwise
+from pathlib import Path
 
 import brotli
 from ext4 import Volume
@@ -47,7 +48,7 @@ def extract():
             if written_blocks != int(lines[1]):
                 raise ValueError("Transfer-list total does not match new + zero blocks")
             ordered = sorted(ranges)
-            if any(a[1] > b[0] for a, b in zip(ordered, ordered[1:])):
+            if any(a[1] > b[0] for a, b in pairwise(ordered)):
                 raise ValueError("Overlapping new ranges")
             print("Decompressing ROM and reconstructing ext4 image...", flush=True)
             decoder = brotli.Decompressor()

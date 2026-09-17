@@ -1,9 +1,9 @@
 """Fetch all external build inputs, pinning the ROM and upstream fonts."""
 import hashlib
 import os
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,7 +40,7 @@ def git_blob(data):
 
 def fetch_fonts(root=ROOT):
     for name, (family, expected) in SOURCES.items():
-        def verify_font(path):
+        def verify_font(path, expected=expected):
             data = path.read_bytes()
             if data[:4] != b"ttcf" or git_blob(data) != expected:
                 raise ValueError(f"Font differs from upstream; refusing to use or overwrite: {path}")

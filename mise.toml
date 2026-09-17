@@ -1,4 +1,6 @@
 [tools]
+ruff = "0.16.6"
+ty = "0.0.78"
 uv = "0.12.9"
 
 [tasks.build]
@@ -12,3 +14,15 @@ run = "uv run --locked --cache-dir .uv-cache python scripts/fetch_assets.py"
 [tasks.test]
 description = "Test independent font patches, XML preservation and recovery guards"
 run = "uv run --locked --cache-dir .uv-cache python -m unittest discover -s tests -v"
+
+[tasks.lint]
+description = "Check Python code with Ruff"
+run = "ruff check scripts recovery tests"
+
+[tasks.typecheck]
+description = "Check Python types with ty using the locked project dependencies"
+run = ["uv sync --locked --cache-dir .uv-cache", "ty check"]
+
+[tasks.check]
+description = "Run all Python static checks"
+depends = ["lint", "typecheck"]
