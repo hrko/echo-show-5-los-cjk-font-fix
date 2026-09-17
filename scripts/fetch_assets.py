@@ -70,7 +70,7 @@ def fetch_verified(url, destination, verify):
         temporary = Path(stream.name)
     try:
         print(f"Downloading: {destination.name}", flush=True)
-        request = Request(url, headers={"User-Agent": "echo-show-5-cjk-font-fix"})
+        request = Request(url, headers={"User-Agent": "echo-show-5-lineageos-variable-fonts"})
         with urlopen(request, timeout=60) as response, temporary.open("wb") as output:
             shutil.copyfileobj(response, output, length=1024 * 1024)
         verify(temporary)

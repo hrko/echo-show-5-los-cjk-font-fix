@@ -56,7 +56,7 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6b/b0/e595ce2a2527e169c3bcd6c33d2473c1918e0b7f6826a043ca1245dd4e5b/crcmod-1.7.tar.gz", hash = "sha256:dc7051a0db5f2bd48665a990d3ec1cc305a466a77358ca4492826f41f283601e", size = 89670, upload-time = "2010-06-27T14:35:29.538Z" }
 
 [[package]]
-name = "echo-show-5-los-cjk-font-fix"
+name = "echo-show-5-lineageos-variable-fonts"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
