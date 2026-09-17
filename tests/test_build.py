@@ -1,4 +1,5 @@
 import hashlib
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -11,7 +12,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from build_zip import CHECKER, META, patch_xml, write_zip, updater, LEGACY_XML_HASH
+from build_zip import CHECKER, META, patch_xml, write_zip, updater
 
 
 class XMLTests(unittest.TestCase):
@@ -74,7 +75,7 @@ class XMLTests(unittest.TestCase):
 
 
 class UpdaterTests(unittest.TestCase):
-    def test_install_restore_order_and_legacy_upgrade_guards(self):
+    def test_install_restore_order_and_supported_xml_guards(self):
         infos = {k: {'file': f'Noto{f}CJK-VF.ttf.ttc', 'sha256': '1' * 64}
                  for k, f in [('sans', 'Sans'), ('serif', 'Serif')]}
         originals = {k: {'file': f'Noto{f}CJK-Regular.ttc', 'sha256': '2' * 64}
@@ -85,7 +86,10 @@ class UpdaterTests(unittest.TestCase):
                 install = updater(b'original', b'patched', infos, originals).decode()
                 restore = updater(b'original', b'patched', infos, originals, True).decode()
         for script in [install, restore]:
-            self.assertIn(LEGACY_XML_HASH, script)
+            guard = next(line for line in script.splitlines()
+                         if '"hash", "/tmp/jp-font-system/system/etc/fonts.xml"' in line)
+            self.assertEqual(re.findall(r'"([0-9a-f]{64})"', guard),
+                             [hashlib.sha256(data).hexdigest() for data in (b'original', b'patched')])
             xml_commit = script.index('assert(rename("/tmp/jp-font-system/system/etc/fonts.xml.jpfont-new"')
             payloads = originals if script == restore else infos
             for info in payloads.values():

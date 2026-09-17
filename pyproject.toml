@@ -1,7 +1,7 @@
 [project]
 name = "echo-show-5-jp-font-fix"
 version = "0.1.0"
-description = "Build and verify a Japanese variable-font recovery ZIP for cronos"
+description = "Build and verify a CJK variable-font recovery ZIP for cronos"
 requires-python = ">=3.12"
 dependencies = ["brotli>=1.1", "fonttools>=4.60", "ext4>=1.0"]
 

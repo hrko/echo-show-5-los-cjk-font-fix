@@ -25,11 +25,6 @@ LOCALES = {"ja": 0, "ko": 1, "zh-Hans": 2, "zh-Hant,zh-Bopo": 3}
 HK_LOCALE = "zh-Hant-HK"
 REGIONS = ["JP", "KR", "SC", "TC", "HK"]
 WEIGHTS = {"sans": list(range(100, 901, 100)), "serif": list(range(200, 901, 100))}
-LEGACY_XML_HASH = "fd042d90c9fa924bbd86843ef6963aa0bbbda7ef811d7642bd94f7e12ce2675a"
-LEGACY_FONTS = {
-    "NotoSansCJKjp-VF.ttf": "240c9b83bf7b386edbae39995ae7e068ed4583f484d92e4a74c34158b5f27b1a",
-    "NotoSerifCJKjp-VF.ttf": "c2ff7cffb6ef75193d4406b030eab5aa6503c48004acec6b040327e2fe1e9e51",
-}
 
 
 def check(condition, message):
@@ -170,7 +165,7 @@ def updater(original, patched, infos, originals, restore=False):
         args = ", ".join(f'"{v}"' for v in (["optional" if optional else "hash", path] + expected))
         return f'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", {args}) == "0" || abort("File verification failed: {path}"));'
 
-    script.append(hash_check(TARGET + "/etc/fonts.xml", hashes + [LEGACY_XML_HASH]))
+    script.append(hash_check(TARGET + "/etc/fonts.xml", hashes))
     # Never remove or overwrite a user's custom old TTC, even on restore.
     for info in originals.values():
         script.append(hash_check(TARGET + "/fonts/" + info["file"], [info["sha256"]], optional=True))
@@ -201,13 +196,11 @@ def updater(original, patched, infos, originals, restore=False):
             path = TARGET + "/fonts/" + info["file"]
             script.extend([f'delete("{path}");',
                 f'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "absent", "{path}") == "0" || abort("Old TTC removal failed."));'])
-    cleanup = dict(LEGACY_FONTS)
     if restore:
         for info in infos.values():
-            cleanup[info["file"]] = info["sha256"]
-    for filename, digest in cleanup.items():
-        path = TARGET + "/fonts/" + filename
-        script.append(f'ifelse(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "hash", "{path}", "{digest}") == "0", delete("{path}"), ui_print("Keeping absent or modified font: {filename}"));')
+            filename, digest = info["file"], info["sha256"]
+            path = TARGET + "/fonts/" + filename
+            script.append(f'ifelse(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "hash", "{path}", "{digest}") == "0", delete("{path}"), ui_print("Keeping absent or modified font: {filename}"));')
     script.extend([f'assert(unmount("{MOUNT}"));', 'ui_print("Done. Reboot system.");'])
     return ("\n".join(script) + "\n").encode()
 
@@ -287,7 +280,7 @@ def main():
         "rom": {"file": ROM.name, "sha256": sha256(ROM), "system_prefix": prefix},
         "fonts": infos, "original_xml_sha256": hashlib.sha256(original).hexdigest(),
         "original_collections": originals, "old_ttc_xml_references": audited_xml,
-        "locales": {**LOCALES, HK_LOCALE: 4}, "accepted_legacy_xml_sha256": LEGACY_XML_HASH,
+        "locales": {**LOCALES, HK_LOCALE: 4},
         "patched_xml_sha256": hashlib.sha256(patched).hexdigest(),
         "updater_sha256": hashlib.sha256(binary).hexdigest(),
         "device_tested": False,
