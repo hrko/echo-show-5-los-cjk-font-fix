@@ -1,8 +1,13 @@
 name: Build and publish release
 
-# Draft release creation does not trigger GitHub Actions. Dispatch on a pushed tag.
+# Run from main and create the version tag at the dispatched commit.
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.1.0 or v0.1.0)'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -23,14 +28,22 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Require a tag
+      - name: Require main and validate the version
+        id: version
         env:
-          REF_TYPE: ${{ github.ref_type }}
+          REF: ${{ github.ref }}
+          VERSION: ${{ inputs.version }}
         run: |
-          if [[ "$REF_TYPE" != tag ]]; then
-            echo '::error::Run this workflow on a pushed tag: gh workflow run release.yml --ref <tag>'
+          if [[ "$REF" != refs/heads/main ]]; then
+            echo '::error::Run this workflow on main: gh workflow run release.yml --ref main -f version=0.1.0'
             exit 1
           fi
+          version="${VERSION#v}"
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo '::error::Version must have the form 0.1.0 or v0.1.0.'
+            exit 1
+          fi
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
       - name: Check out the exact workflow commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,12 +51,40 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
 
+      - name: Validate the version increment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh api --paginate --slurp "repos/$GH_REPO/releases" > "$RUNNER_TEMP/version-releases.json"
+          python3 scripts/validate_release_version.py "$TAG" "$RUNNER_TEMP/version-releases.json"
+
+      - name: Create or verify the version tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          # Listing refs distinguishes an absent tag from an API failure.
+          gh api --paginate "repos/$GH_REPO/git/matching-refs/tags/$TAG" > "$RUNNER_TEMP/tag-refs.json"
+          tag_ref=$(jq -sc --arg ref "refs/tags/$TAG" '[.[][] | select(.ref == $ref)] | first // empty' "$RUNNER_TEMP/tag-refs.json")
+          if [[ -z "$tag_ref" ]]; then
+            gh api --method POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+          fi
+          encoded_ref=$(jq -rn --arg ref "refs/tags/$TAG" '$ref | @uri')
+          current_sha=$(gh api "repos/$GH_REPO/commits/$encoded_ref" --jq '.sha')
+          if [[ "$current_sha" != "$GITHUB_SHA" ]]; then
+            echo '::error::The version tag already points to a different commit. Rerun the original workflow run or choose a new version.'
+            exit 1
+          fi
+
       - name: Create or find the draft release
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           # Listing releases distinguishes an absent release from an API failure.
           gh api --paginate "repos/$GH_REPO/releases" > "$RUNNER_TEMP/releases.json"
@@ -82,7 +123,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.version.outputs.tag }}
           RELEASE_ID: ${{ steps.release.outputs.id }}
         run: |
           endpoint="repos/$GH_REPO/releases/$RELEASE_ID"
@@ -106,4 +147,6 @@ jobs:
           gh api "$endpoint" > "$RUNNER_TEMP/release.json"
           jq -e --arg tag "$TAG" '.draft == true and .tag_name == $tag' "$RUNNER_TEMP/release.json" > /dev/null
           # Publish last: immutable releases lock their tag and assets at this point.
+          gh api --paginate --slurp "repos/$GH_REPO/releases" > "$RUNNER_TEMP/version-releases.json"
+          python3 scripts/validate_release_version.py "$TAG" "$RUNNER_TEMP/version-releases.json"
           gh api --method PATCH "$endpoint" -F draft=false --jq '.html_url'
