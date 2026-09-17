@@ -4,7 +4,7 @@
 
 XML の担当範囲の定義・分解・再合成には、ホストと同じ `scripts/font_slots.py` を使います。このファイルを ZIP の `patch/font_slots.py` に変更せず同梱し、`recovery/font_patch.py` から利用します。端末側では担当スロット・共通構造・フォントファイルを検証し、書き込み準備後に入力が変わっていないことも確認します。
 
-マウント、フォントの展開、SELinux 属性の設定、ファイル名の変更・削除は、ROM 付属の updater が Edify スクリプトに従って行います。シェルスクリプトは Python の起動だけを担当し、awk は使いません。
+マウント、フォントの展開、SELinux 属性の設定、ファイル名の変更・削除は、基準の cronos ROM 付属の ARM32 updater が Edify スクリプトに従って行います。3機種共通 ZIP にも同じ updater を同梱します。シェルスクリプトは Python の起動だけを担当し、awk は使いません。
 
 ## 固定入力と再取得
 

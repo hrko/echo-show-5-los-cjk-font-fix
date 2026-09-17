@@ -11,11 +11,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 
+from targets import TARGETS
+
 
 class BuiltZipTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.paths = {(component, mode): ROOT / 'dist' / f'cronos-{component}-fonts-{mode}.zip'
+        cls.paths = {(component, mode): ROOT / 'dist' / f'echo-show-{component}-fonts-{mode}.zip'
                      for component in ('cjk', 'latin', 'serif', 'mono') for mode in ('install', 'restore')}
         if not all(path.exists() for path in cls.paths.values()):
             raise unittest.SkipTest('Run mise run build for archive integration tests')
@@ -27,8 +29,14 @@ class BuiltZipTests(unittest.TestCase):
         for (component, mode), path in self.paths.items():
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), manifest[path.name])
             with zipfile.ZipFile(path) as archive:
-                report = ROOT / 'dist' / f'cronos-{component}-fonts-verification.json'
+                report = ROOT / 'dist' / f'echo-show-{component}-fonts-verification.json'
                 self.assertEqual(report.read_bytes(), archive.read('verification.json'))
+                compatibility = json.loads(report.read_bytes())['compatibility']
+                self.assertEqual({r['device']: r['sha256'] for r in compatibility['roms']},
+                                 {device: t['sha256'] for device, t in TARGETS.items()})
+                self.assertEqual(len(compatibility['stock_font_sha256']), 255)
+                for target in TARGETS.values():
+                    self.assertIn(target['fingerprint'].encode(), archive.read('META-INF/com/google/android/updater-script'))
                 fonts = {name for name in archive.namelist() if name.startswith('system/fonts/')}
                 if component == 'latin':
                     self.assertEqual(fonts, {'system/fonts/GoogleSansFlex-Regular.ttf'} if mode == 'install' else set())
@@ -50,11 +58,16 @@ class BuiltZipTests(unittest.TestCase):
                     self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(), expected, name)
 
     def test_real_rom_transitions_reuse_recovery_workspace(self):
+        for device in TARGETS:
+            folder = ROOT / 'build' if device == 'cronos' else ROOT / 'build' / device
+            with self.subTest(device=device):
+                self.check_real_rom_transitions((folder / 'fonts.original.xml').read_bytes())
+
+    def check_real_rom_transitions(self, original):
         from build_cjk import patch_cjk
         from build_latin import patch_latin
         from build_named import patch_named
         from font_slots import OWNERS, compose_xml, split_xml
-        original = (ROOT / 'build/fonts.original.xml').read_bytes()
         patches = {'cjk': patch_cjk(original), 'latin': patch_latin(original),
                    **{key: patch_named(original, key) for key in ('serif', 'mono')}}
         with tempfile.TemporaryDirectory() as directory:

@@ -1,7 +1,7 @@
 [project]
 name = "echo-show-5-lineageos-variable-fonts"
 version = "0.1.0"
-description = "Build and verify CJK, Latin, serif and monospace variable-font recovery ZIPs for Echo Show 5 (cronos) running LineageOS"
+description = "Build and verify shared variable-font recovery ZIPs for Echo Show checkers, cronos and crown running LineageOS 18.1"
 requires-python = ">=3.12"
 dependencies = ["brotli>=1.1", "fonttools>=4.60", "ext4>=1.0"]
 

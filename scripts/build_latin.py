@@ -107,7 +107,7 @@ def font_info(path):
                 "sample_outline_sha256": outlines}
 
 
-def build_latin(original, binary, dist):
+def build_latin(original, binary, dist, compatibility):
     from build_common import (
         CHECKER,
         META,
@@ -150,7 +150,7 @@ def build_latin(original, binary, dist):
                 raise ValueError("Missing font filename")
             if item.text.strip() != LATIN_FILE:
                 volume.inode_at('/system/fonts/' + item.text.strip())
-    report = {"component": "latin", "device_tested": False,
+    report = {"component": "latin", "device_tested": False, "compatibility": compatibility,
               "rom": {"file": ROM.name, "sha256": sha256(ROM)}, "font": info,
               "upstream": {"url": LATIN_URL, "commit": LATIN_COMMIT, "license": "SIL OFL 1.1",
                            "sha256": LATIN_SHA256},

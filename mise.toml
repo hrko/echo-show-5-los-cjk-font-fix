@@ -8,7 +8,7 @@ description = "Verify inputs and build independent CJK, Latin, serif and mono in
 run = "uv run --locked --cache-dir .uv-cache python scripts/build_patches.py"
 
 [tasks.fetch-assets]
-description = "Fetch and verify the pinned ROM, fonts and ARMv7 Python runtime"
+description = "Fetch and verify three pinned Echo Show ROMs, fonts and ARMv7 Python runtime"
 run = "uv run --locked --cache-dir .uv-cache python scripts/fetch_assets.py"
 
 [tasks.test]

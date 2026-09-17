@@ -116,7 +116,7 @@ def patch_cjk(original):
     return result.encode("utf-8")
 
 
-def build_cjk(original, binary, dist):
+def build_cjk(original, binary, dist, compatibility):
     patched = patch_cjk(original)
     infos = {kind: font_info(ROOT / filename, WEIGHTS[kind], kind) for kind, filename in FONTS.items()}
     original_data = {}
@@ -170,6 +170,7 @@ def build_cjk(original, binary, dist):
                  for kind, name in ORIGINAL_FONTS.items()}
     (BUILD / "fonts.cjk.xml").write_bytes(patched)
     report = {
+        "compatibility": compatibility,
         "rom": {"file": ROM.name, "sha256": sha256(ROM), "system_prefix": "/system"},
         "fonts": infos, "original_xml_sha256": hashlib.sha256(original).hexdigest(),
         "original_collections": originals, "old_ttc_xml_references": audited_xml,

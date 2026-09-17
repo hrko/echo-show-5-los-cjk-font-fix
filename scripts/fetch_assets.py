@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 from urllib.request import Request, urlopen
 
+from targets import TARGETS, rom_url
+
 ROOT = Path(__file__).resolve().parents[1]
 COMMIT = "f8d157532fbfaeda587e826d4cd5b21a49186f7c"
 SOURCES = {
@@ -28,10 +30,10 @@ def verify_latin(path):
 def fetch_latin(root=ROOT):
     fetch_verified(LATIN_URL, root / LATIN_FILE, verify_latin)
 
-ROM_NAME = "lineage-18.1-20260904-UNOFFICIAL-cronos.zip"
+ROM_NAME = TARGETS['cronos']['file']
 ROM_REPO = "amazon-oss/releases"
-ROM_TAG = "lineage-18.1-cronos-v0.4"
-ROM_SHA256 = "4c355998061a454792128d4b730932b47ed05a3d2a6d2628599218f44cc84678"
+ROM_TAG = TARGETS['cronos']['tag']
+ROM_SHA256 = TARGETS['cronos']['sha256']
 
 
 def git_blob(data):
@@ -48,16 +50,22 @@ def fetch_fonts(root=ROOT):
         fetch_verified(url, root / name, verify_font)
 
 
-def verify_rom(path):
+def verify_rom(path, expected=None):
     with path.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
-    if digest != ROM_SHA256:
+    if digest != (ROM_SHA256 if expected is None else expected):
         raise ValueError(f"ROM SHA-256 mismatch; refusing to use or overwrite: {path}")
 
 
 def fetch_rom(root=ROOT):
     url = f"https://github.com/{ROM_REPO}/releases/download/{ROM_TAG}/{ROM_NAME}"
     fetch_verified(url, root / ROM_NAME, verify_rom)
+
+
+def fetch_roms(root=ROOT):
+    for target in TARGETS.values():
+        fetch_verified(rom_url(target), root / target['file'],
+                       lambda path, h=target['sha256']: verify_rom(path, h))
 
 
 def fetch_verified(url, destination, verify):
@@ -85,7 +93,7 @@ def main():
     for name in ("NotoSans-OFL.txt", "NotoSerif-OFL.txt", "FONT-COPYRIGHT.txt"):
         if not (ROOT / "licenses" / name).is_file():
             raise FileNotFoundError(f"Restore the tracked licenses/{name} file from Git")
-    fetch_rom()
+    fetch_roms()
     fetch_fonts()
     fetch_latin()
     from named_fonts import fetch_named_fonts

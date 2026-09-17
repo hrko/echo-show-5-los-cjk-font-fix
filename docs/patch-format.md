@@ -2,6 +2,8 @@
 
 この形式は、[README に記載した対象 ROM](../README.md) の `fonts.xml` を、パッチごとの担当範囲に分けて変更・復元するためのものです。担当範囲を「スロット」と呼びます。
 
+3機種共通 ZIP も v1 を使用します。ビルド前に全対象 ROM の XML と通常フォントファイルの一致を確認するため、同じ断片で各機種の元設定へ復元できます。[互換性の検証条件](device-compatibility.md)を参照してください。
+
 XML の分解・合成には、ホストとリカバリーで共通の `scripts/font_slots.py` を使います。端末側では `recovery/font_patch.py` が検証・合成と、書き込み前のファイル準備（ステージング）を行います。実行用の ARMv7 Python は ZIP に同梱し、TWRP の `/tmp` で起動します。[ランタイムの詳細](python-runtime.md)を参照してください。
 
 ## 各パッチの担当スロット
@@ -27,7 +29,7 @@ CJK の `fallbackFor="serif"` は CJK パッチの担当です。Serif パッチ
 
 ## 書き込みと復元
 
-1. 機種・ROM fingerprint・必要な recovery コマンドを確認。
+1. リカバリーの機種・System の機種と、その機種に対応する ROM fingerprint・必要な recovery コマンドを確認。
 2. `/tmp` で XML を分解し、共通構造と操作対象スロットを検証・合成。
 3. 上書き・削除対象の既存フォントをハッシュ照合。欧文版は残す元 Roboto 全20ファイルも照合。
 4. 導入時は新フォント、CJK 復元時は元 TTC を先に展開し、ハッシュ・属性を設定して rename。

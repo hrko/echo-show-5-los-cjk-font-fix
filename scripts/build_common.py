@@ -2,8 +2,9 @@
 import stat
 import zipfile
 
-from extract_rom import BUILD, ROOT
+from extract_rom import ROOT
 from font_slots import payload as slot_payload
+from targets import SYSTEM_BLOCKS, TARGETS
 
 META = "META-INF/com/google/android/"
 MOUNT = "/tmp/jp-font-system"
@@ -17,7 +18,7 @@ def artifact_name(component, kind):
     if kind not in ('install', 'restore', 'verification'):
         raise ValueError(f"Unknown artifact kind: {kind}")
     suffix = 'json' if kind == 'verification' else 'zip'
-    return f'cronos-{component}-fonts-{kind}.{suffix}'
+    return f'echo-show-{component}-fonts-{kind}.{suffix}'
 
 
 def check(condition, message):
@@ -32,10 +33,6 @@ exec /sbin/sh /tmp/jp-font-patch/run-python.sh check "$@"
 
 
 def updater(original, patched, infos, originals, restore=False, component="cjk", retained=None):
-    props = dict(line.split("=", 1) for line in (BUILD / "build.prop").read_text().splitlines()
-                 if "=" in line and not line.startswith("#"))
-    fingerprint = props["ro.system.build.fingerprint"]
-    check('"' not in fingerprint and "\\" not in fingerprint, "Unsafe fingerprint")
     action = "Restore" if restore else "Install"
     from named_fonts import COMPONENTS
     label = {"cjk": "CJK Sans 100-900 / Serif 200-900", "latin": "Google Sans Flex 100-900 normal/italic",
@@ -43,17 +40,26 @@ def updater(original, patched, infos, originals, restore=False, component="cjk",
     patch_dir = "/tmp/jp-font-patch"
     work_dir = "/tmp/jp-font-work"
     xml = TARGET + "/etc/fonts.xml"
+    devices = []
+    roms = []
+    for device, target in TARGETS.items():
+        fingerprint = target['fingerprint']
+        check(all(c not in device + fingerprint for c in ('"', '\\', '\n', '\r')), 'Unsafe target')
+        recovery_device = f'(getprop("ro.product.device") == "{device}" || getprop("ro.build.product") == "{device}")'
+        devices.append(recovery_device)
+        roms.append(f'({recovery_device} && file_getprop("{TARGET}/build.prop", "ro.product.system.device") == "{device}" && file_getprop("{TARGET}/build.prop", "ro.system.build.fingerprint") == "{fingerprint}")')
+    mounts = ' || '.join(f'mount("ext4", "EMMC", "{block}", "{MOUNT}", "rw")' for block in SYSTEM_BLOCKS)
     script = [
-        f'ui_print("{action} {label} (cronos)");',
-        'assert(getprop("ro.product.device") == "cronos" || getprop("ro.build.product") == "cronos" || abort("This ZIP is only for cronos."));',
+        f'ui_print("{action} {label} (Echo Show: checkers / cronos / crown)");',
+        f'assert({" || ".join(devices)} || abort("Unsupported device. Requires checkers, cronos or crown."));',
         'assert(package_extract_dir("runtime", "/tmp/jp-font-python"));',
         'set_metadata("/tmp/jp-font-python/lib/ld-musl-armhf.so.1", "uid", 0, "gid", 0, "mode", 0755);',
         f'assert(package_extract_dir("patch", "{patch_dir}"));',
         'assert(package_extract_file("check.sh", "/tmp/jp-font-check.sh"));',
         'assert(run_program("/sbin/sh", "/tmp/jp-font-check.sh", "ready") == "0" || abort("Bundled ARMv7 Python could not start."));',
         f'ifelse(is_mounted("{MOUNT}"), assert(unmount("{MOUNT}")));',
-        f'assert(mount("ext4", "EMMC", "/dev/block/platform/soc/by-name/system", "{MOUNT}", "rw") || mount("ext4", "EMMC", "/dev/block/platform/soc/11230000.mmc/by-name/system", "{MOUNT}", "rw") || abort("Cannot mount system read-write. Unmount System in TWRP and retry."));',
-        f'assert(file_getprop("{TARGET}/build.prop", "ro.system.build.fingerprint") == "{fingerprint}" || abort("Wrong ROM build."));',
+        f'assert({mounts} || abort("Cannot mount system read-write. Unmount System in TWRP and retry."));',
+        f'assert({" || ".join(roms)} || abort("Unsupported ROM or device/ROM mismatch."));',
     ]
 
     def hash_check(path, expected, optional=False):
@@ -131,5 +137,4 @@ def recovery_payload(original, patched, component, restore):
         files["patch/" + name] = (ROOT / "recovery" / name).read_bytes()
     files["patch/font_slots.py"] = (ROOT / "scripts/font_slots.py").read_bytes()
     return files
-
 

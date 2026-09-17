@@ -6,7 +6,6 @@ import unittest
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -83,11 +82,8 @@ class UpdaterTests(unittest.TestCase):
                  for k, f in [('sans', 'Sans'), ('serif', 'Serif')]}
         originals = {k: {'file': f'Noto{f}CJK-Regular.ttc', 'sha256': '2' * 64}
                      for k, f in [('sans', 'Sans'), ('serif', 'Serif')]}
-        with tempfile.TemporaryDirectory() as directory:
-            (Path(directory) / 'build.prop').write_text('ro.system.build.fingerprint=test\n')
-            with patch('build_common.BUILD', Path(directory)):
-                install = updater(b'original', b'patched', infos, originals).decode()
-                restore = updater(b'original', b'patched', infos, originals, True).decode()
+        install = updater(b'original', b'patched', infos, originals).decode()
+        restore = updater(b'original', b'patched', infos, originals, True).decode()
         for script in [install, restore]:
             self.assertLess(script.index('"prepare"'), script.index('package_extract_file("system/'))
             self.assertIn('"stage"', script)

@@ -77,7 +77,7 @@ def font_info(component, style):
                 'ascii_advance_widths': advances}
 
 
-def build_named(original, binary, dist, component):
+def build_named(original, binary, dist, component, compatibility):
     from build_common import (
         CHECKER,
         META,
@@ -107,7 +107,7 @@ def build_named(original, binary, dist, component):
             filename = (item.text or '').strip()
             if filename not in added:
                 volume.inode_at('/system/fonts/' + filename)
-    report = {'component': component, 'device_tested': False, 'fonts': infos,
+    report = {'component': component, 'device_tested': False, 'fonts': infos, 'compatibility': compatibility,
               'rom': {'file': ROM.name, 'sha256': sha256(ROM)}, 'upstream_commit': LATIN_COMMIT,
               'weights': config['weights'], 'fixed_axes': config['fixed'],
               'retained_fonts': retained, 'codepoints_missing_vs_stock': coverage,

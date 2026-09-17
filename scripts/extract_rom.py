@@ -6,9 +6,10 @@ from pathlib import Path
 
 import brotli
 from ext4 import Volume
+from targets import TARGETS
 
 ROOT = Path(__file__).resolve().parents[1]
-ROM = ROOT / "lineage-18.1-20260904-UNOFFICIAL-cronos.zip"
+ROM = ROOT / TARGETS['cronos']['file']
 BUILD = ROOT / "build"
 
 
@@ -17,13 +18,15 @@ def sha256(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def extract():
-    BUILD.mkdir(exist_ok=True)
-    image = BUILD / "system.img"
-    stamp = BUILD / "rom.sha256"
-    digest = sha256(ROM)
+def extract(rom=ROM, build=BUILD):
+    build.mkdir(parents=True, exist_ok=True)
+    image = build / "system.img"
+    stamp = build / "rom.sha256"
+    digest = sha256(rom)
     if not (image.exists() and stamp.exists() and stamp.read_text() == digest):
-        with zipfile.ZipFile(ROM) as archive:
+        # A failed reconstruction must not leave a valid cache stamp.
+        stamp.unlink(missing_ok=True)
+        with zipfile.ZipFile(rom) as archive:
             lines = archive.read("system.transfer.list").decode().splitlines()
             if lines[0] != "4" or lines[2:4] != ["0", "0"]:
                 raise ValueError("Only full version-4 OTAs without stash are supported")
@@ -85,13 +88,13 @@ def extract():
         if len(roots) != 1:
             raise ValueError(f"Ambiguous system layout: {len(roots)} roots")
         prefix, fonts = roots[0]
-        (BUILD / "fonts.original.xml").write_bytes(fonts)
-        (BUILD / "build.prop").write_bytes(volume.inode_at(prefix + "/build.prop").open().read())
-        (BUILD / "system-prefix.txt").write_text(prefix)
+        (build / "fonts.original.xml").write_bytes(fonts)
+        (build / "build.prop").write_bytes(volume.inode_at(prefix + "/build.prop").open().read())
+        (build / "system-prefix.txt").write_text(prefix)
         print(f"System prefix inside ext4: {prefix or '/'}")
-    with zipfile.ZipFile(ROM) as archive:
-        (BUILD / "update-binary").write_bytes(archive.read("META-INF/com/google/android/update-binary"))
-        (BUILD / "rom-updater-script").write_bytes(archive.read("META-INF/com/google/android/updater-script"))
+    with zipfile.ZipFile(rom) as archive:
+        (build / "update-binary").write_bytes(archive.read("META-INF/com/google/android/update-binary"))
+        (build / "rom-updater-script").write_bytes(archive.read("META-INF/com/google/android/updater-script"))
     return prefix
 
 
