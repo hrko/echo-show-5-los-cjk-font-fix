@@ -10,6 +10,10 @@ run = "uv run --locked --cache-dir .uv-cache python scripts/build_zip.py"
 description = "Fetch pinned upstream CJK variable collections with gh"
 run = "uv run --locked --cache-dir .uv-cache python scripts/fetch_fonts.py"
 
+[tasks.fetch-assets]
+description = "Fetch and verify the pinned ROM and all variable font collections"
+run = "uv run --locked --cache-dir .uv-cache python scripts/fetch_assets.py"
+
 [tasks.test]
 description = "Test XML preservation and installer guards"
 run = "uv run --locked --cache-dir .uv-cache python -m unittest discover -s tests -v"

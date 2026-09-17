@@ -7,3 +7,4 @@ backups/
 *.zip
 *.ttf
 *.ttc
+.rom-download-*.tmp

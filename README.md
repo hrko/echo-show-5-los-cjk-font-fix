@@ -32,14 +32,14 @@ Echo Show 5 **第2世代（cronos）** / LineageOS 18.1 向けの TWRP ZIP を�
 
 ## 再作成
 
-mise と Python 3.14 が使用できる環境で実行します。uv は `mise.toml` に固定し、
+mise、Python 3.14、GitHub CLI (`gh`) が使用できる環境で実行します。uv は `mise.toml` に固定し、
 Python バージョンは `.python-version`、依存関係は `pyproject.toml` と `uv.lock` で管理します。
 `uv sync` / `uv run` がプロジェクトの `.venv` を管理します。pip での手動導入は不要です。
 
 ```powershell
 mise install
 mise exec -- uv sync --locked --cache-dir .uv-cache
-mise run fetch-fonts
+mise run fetch-assets
 mise run build
 mise run test
 ```
@@ -50,8 +50,15 @@ mise run test
 - `NotoSansCJK-VF.ttf.ttc`（公式 Version 2.004、5ロケール共有）
 - `NotoSerifCJK-VF.ttf.ttc`（公式 Version 2.003、5ロケール共有）
 
-`fetch-fonts` は `gh api` で固定コミットから取得し Git blob ハッシュを照合します。
+`fetch-assets` は必要な外部アセット3ファイルをすべて取得・検証します。
+ROM は [公式リリース lineage-18.1-cronos-v0.4](https://github.com/amazon-oss/releases/releases/tag/lineage-18.1-cronos-v0.4)
+から `gh release download` で取得し、固定 SHA-256 を照合します。
+ダウンロード中や検証失敗の ROM を正式な入力ファイル名で残さない構成です。
+フォントは `gh api` で固定コミットから取得し Git blob ハッシュを照合します。
 既存ファイルが異なる場合は上書きせず中止します。旧日本語 TTF はビルドには不要です。
+一致する既存ファイルは再ダウンロードしません。初回の総ダウンロード量は約585 MBです。
+フォントだけを取得する既存の `mise run fetch-fonts` も利用できます。
+ライセンス類は Git に同梱済みで、fonts.xml・update-binary・復元用 TTC はビルド時に ROM から抽出します。
 取得元・版は [全 CJK 版の検証記録](CJK_VALIDATION.md) に記載しています。
 大きい入力、`build/`、`dist/`、仮想環境は Git 管理対象外です。
 初回は Brotli をストリーム展開して約3.25 GBの ext4 イメージを `build/system.img` に生成します。
