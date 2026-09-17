@@ -12,7 +12,7 @@ import zipfile
 from fontTools.pens.recordingPen import RecordingPen
 from fontTools.ttLib import TTCollection
 from ext4 import Volume, EXT4_FT
-from fetch_fonts import COMMIT, SOURCES, git_blob
+from fetch_assets import COMMIT, SOURCES, git_blob
 
 from extract_rom import BUILD, ROM, ROOT, extract, sha256
 

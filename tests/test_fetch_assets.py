@@ -1,6 +1,6 @@
 import hashlib
+import io
 from pathlib import Path
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,7 +17,7 @@ class FetchAssetsTests(unittest.TestCase):
             target = root / fetch_assets.ROM_NAME
             target.write_bytes(b"verified ROM")
             digest = hashlib.sha256(target.read_bytes()).hexdigest()
-            with patch.object(fetch_assets, 'ROM_SHA256', digest), patch.object(fetch_assets.subprocess, 'run') as run:
+            with patch.object(fetch_assets, 'ROM_SHA256', digest), patch.object(fetch_assets, 'urlopen') as run:
                 fetch_assets.fetch_rom(root)
                 run.assert_not_called()
                 target.write_bytes(b"different ROM")
@@ -31,24 +31,48 @@ class FetchAssetsTests(unittest.TestCase):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 target = root / fetch_assets.ROM_NAME
-                def download(args, check):
-                    self.assertIn(fetch_assets.ROM_TAG, args)
-                    temporary = Path(args[args.index('--output') + 1])
-                    temporary.write_bytes(b"wrong" if mode == 'wrong_hash' else b"verified ROM")
+                def download(request, timeout):
+                    self.assertIn(fetch_assets.ROM_TAG, request.full_url)
+                    self.assertTrue(request.full_url.startswith('https://'))
                     if mode == 'interrupted':
-                        raise subprocess.CalledProcessError(1, args)
+                        class Interrupted(io.BytesIO):
+                            def read(self, size=-1):
+                                if self.tell():
+                                    raise OSError('connection interrupted')
+                                return super().read(4)
+                        return Interrupted(b'verified ROM')
                     if mode == 'concurrent':
                         target.write_bytes(b"other process")
+                    return io.BytesIO(b"wrong" if mode == 'wrong_hash' else b"verified ROM")
                 with patch.object(fetch_assets, 'ROM_SHA256', hashlib.sha256(b"verified ROM").hexdigest()), \
-                     patch.object(fetch_assets.subprocess, 'run', side_effect=download):
+                     patch.object(fetch_assets, 'urlopen', side_effect=download):
                     if mode == 'success':
                         fetch_assets.fetch_rom(root)
                         self.assertEqual(target.read_bytes(), b"verified ROM")
                     else:
-                        with self.assertRaises((ValueError, subprocess.CalledProcessError, FileExistsError)):
+                        with self.assertRaises((ValueError, OSError)):
                             fetch_assets.fetch_rom(root)
                         if mode == 'concurrent':
                             self.assertEqual(target.read_bytes(), b"other process")
                         else:
                             self.assertFalse(target.exists())
-                self.assertEqual(list(root.glob('.rom-download-*')), [])
+                self.assertEqual(list(root.glob('.asset-download-*')), [])
+
+    def test_fonts_use_pinned_https_urls_and_verify_before_publishing(self):
+        data = b'ttcf test font'
+        sources = {'test.ttc': ('Sans', fetch_assets.git_blob(data))}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(fetch_assets, 'SOURCES', sources), \
+                 patch.object(fetch_assets, 'urlopen', return_value=io.BytesIO(data)) as download:
+                fetch_assets.fetch_fonts(root)
+                url = download.call_args.args[0].full_url
+                self.assertEqual(url, f'https://raw.githubusercontent.com/notofonts/noto-cjk/{fetch_assets.COMMIT}/Sans/Variable/OTC/test.ttc')
+                self.assertEqual((root / 'test.ttc').read_bytes(), data)
+                fetch_assets.fetch_fonts(root)
+                self.assertEqual(download.call_count, 1)
+                (root / 'test.ttc').write_bytes(b'modified')
+                with self.assertRaises(ValueError):
+                    fetch_assets.fetch_fonts(root)
+                self.assertEqual((root / 'test.ttc').read_bytes(), b'modified')
+                self.assertEqual(download.call_count, 1)

@@ -1,14 +1,9 @@
 [tools]
-codex = "0.153.0"
 uv = "0.12.9"
 
 [tasks.build]
 description = "Verify inputs and build install/restore ZIPs"
 run = "uv run --locked --cache-dir .uv-cache python scripts/build_zip.py"
-
-[tasks.fetch-fonts]
-description = "Fetch pinned upstream CJK variable collections with gh"
-run = "uv run --locked --cache-dir .uv-cache python scripts/fetch_fonts.py"
 
 [tasks.fetch-assets]
 description = "Fetch and verify the pinned ROM and all variable font collections"

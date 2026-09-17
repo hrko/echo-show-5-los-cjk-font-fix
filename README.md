@@ -1,6 +1,6 @@
 # Echo Show 5 CJK 可変フォント
 
-配置済みの `lineage-18.1-20260904-UNOFFICIAL-cronos.zip` を元に、
+`lineage-18.1-20260904-UNOFFICIAL-cronos.zip` を元に、
 Echo Show 5 **第2世代（cronos）** / LineageOS 18.1 向けの TWRP ZIP を作成します。
 ゴシック体は **100〜900 の9段階**、明朝体は **200〜900 の8段階**です。
 明朝体の100は公式フォントの範囲外なので追加せず、要求時は200へのマッチングになります。
@@ -14,7 +14,7 @@ Echo Show 5 **第2世代（cronos）** / LineageOS 18.1 向けの TWRP ZIP を�
 | `ko` | 1 | KR |
 | `zh-Hans` | 2 | SC |
 | `zh-Hant,zh-Bopo` | 3 | TC（注音も維持） |
-| `zh-Hant-HK` | 4 | HK（今回追加） |
+| `zh-Hant-HK` | 4 | HK |
 
 ## 成果物
 
@@ -26,13 +26,12 @@ Echo Show 5 **第2世代（cronos）** / LineageOS 18.1 向けの TWRP ZIP を�
 
 **2026-09-17、全 CJK 版の実機適用・旧 TTC 削除・Android 正常起動を確認しました。**
 各ロケールの全ウェイト描画と、全 CJK 版の復元 ZIP の実行は未検証です。
-以前の日本語単独版での導入・復元・再起動の結果は [実機検証記録](DEVICE_VALIDATION.md) にあります。
 旧日本語版の `cronos-jp-*` ZIP が dist に残っていても、全 CJK 版の復元には使用しないでください。
 他の ROM・他の世代向けの汎用 ZIP ではありません。
 
 ## 再作成
 
-mise、Python 3.14、GitHub CLI (`gh`) が使用できる環境で実行します。uv は `mise.toml` に固定し、
+mise と Python 3.14 が使用できる環境で実行します。uv は `mise.toml` に固定し、
 Python バージョンは `.python-version`、依存関係は `pyproject.toml` と `uv.lock` で管理します。
 `uv sync` / `uv run` がプロジェクトの `.venv` を管理します。pip での手動導入は不要です。
 
@@ -52,14 +51,16 @@ mise run test
 
 `fetch-assets` は必要な外部アセット3ファイルをすべて取得・検証します。
 ROM は [公式リリース lineage-18.1-cronos-v0.4](https://github.com/amazon-oss/releases/releases/tag/lineage-18.1-cronos-v0.4)
-から `gh release download` で取得し、固定 SHA-256 を照合します。
-ダウンロード中や検証失敗の ROM を正式な入力ファイル名で残さない構成です。
-フォントは `gh api` で固定コミットから取得し Git blob ハッシュを照合します。
+から Python 標準ライブラリの HTTPS 通信で取得し、固定 SHA-256 を照合します。
+フォントは GitHub の raw URL から固定コミットのファイルを取得し、Git blob ハッシュを照合します。
+GitHub CLI や認証設定は不要です。全アセットを一時ファイルへダウンロードし、検証後に正式な名前で保存します。
 既存ファイルが異なる場合は上書きせず中止します。旧日本語 TTF はビルドには不要です。
 一致する既存ファイルは再ダウンロードしません。初回の総ダウンロード量は約585 MBです。
-フォントだけを取得する既存の `mise run fetch-fonts` も利用できます。
 ライセンス類は Git に同梱済みで、fonts.xml・update-binary・復元用 TTC はビルド時に ROM から抽出します。
-取得元・版は [全 CJK 版の検証記録](CJK_VALIDATION.md) に記載しています。
+フォントの取得元は Noto CJK の固定コミット
+[`f8d157532fbfaeda587e826d4cd5b21a49186f7c`](https://github.com/notofonts/noto-cjk/tree/f8d157532fbfaeda587e826d4cd5b21a49186f7c)
+にある `Sans/Variable/OTC/` と `Serif/Variable/OTC/` です。
+バージョン・ハッシュ・各ロケールのウェイト検証結果は、ビルド時に `dist/cjk-verification.json` へ記録します。
 大きい入力、`build/`、`dist/`、仮想環境は Git 管理対象外です。
 初回は Brotli をストリーム展開して約3.25 GBの ext4 イメージを `build/system.img` に生成します。
 ZIP 等を含め、少なくとも4 GB程度の追加空き容量を確保してください。
@@ -70,6 +71,8 @@ ZIP 等を含め、少なくとも4 GB程度の追加空き容量を確保して
 既存4つの CJK family を置換し、香港用を追加します。その他の XML は元のバイト列を保持します。
 削除する TTC が他の XML から参照されていないことも元 ROM 全体で検査します。
 同じ入力・Python/依存関係での再作成では ZIP の順序・時刻・権限も一定です。
+ビルドでは、元の4ロケールの収録文字を失わないこと、5ロケールの各ウェイトでサンプル文字の輪郭が変わること、
+生成 ZIP の内容と CRC を検証します。JSON の `device_tested: false` はビルド処理自体が実機テストを行わないことを示します。
 
 ## TWRP で導入
 

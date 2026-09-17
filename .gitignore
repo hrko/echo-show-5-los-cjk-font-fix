@@ -8,3 +8,4 @@ backups/
 *.ttf
 *.ttc
 .rom-download-*.tmp
+.asset-download-*.tmp
