@@ -1,5 +1,5 @@
 [project]
-name = "echo-show-5-jp-font-fix"
+name = "echo-show-5-los-cjk-font-fix"
 version = "0.1.0"
 description = "Build and verify a CJK variable-font recovery ZIP for cronos"
 requires-python = ">=3.12"
